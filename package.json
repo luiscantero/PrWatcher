@@ -2,7 +2,7 @@
   "name": "pr-watcher",
   "displayName": "PR Watcher for Azure DevOps",
   "description": "Dashboard of your team's Azure DevOps pull requests: who needs to review, approvals, re-approvals after new pushes, failed validation, blocking policies and auto-complete. Merged PRs stay listed for 60 hours.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "luiscantero",
   "license": "MIT",
   "icon": "icon.png",

@@ -167,7 +167,7 @@ Requirements: Node.js 20+.
 npm install
 npm test          # unit tests
 npm run package   # writes pr-watcher-<version>.vsix
-code --install-extension pr-watcher-0.1.0.vsix
+code --install-extension pr-watcher-0.1.1.vsix
 ```
 
 For development, run `npm run watch` and press `F5` (*Run Extension*).
