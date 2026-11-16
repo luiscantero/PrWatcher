@@ -130,20 +130,19 @@ export async function activate(context: vscode.ExtensionContext) {
     if (mode === "off" || fresh.length === 0) {
       return;
     }
+    // The notifications are not awaited: their promises only settle when clicked or closed, which would stall refreshes.
     if (fresh.length === 1) {
       const pr = fresh[0];
       const repo = pr.repoKey.split("/").pop();
-      const choice = await vscode.window.showInformationMessage(`New pull request in ${repo} by ${pr.author}: ${pr.title}`, "Open", "Show Dashboard");
-      if (choice === "Open") {
-        void vscode.env.openExternal(vscode.Uri.parse(pr.url, true));
-      } else if (choice === "Show Dashboard") {
-        dashboard.show();
-      }
+      void vscode.window.showInformationMessage(`New pull request in ${repo} by ${pr.author}: ${pr.title}`, "Open", "Show Dashboard").then((choice) => {
+        if (choice === "Open") {
+          void vscode.env.openExternal(vscode.Uri.parse(pr.url, true));
+        } else if (choice === "Show Dashboard") {
+          dashboard.show();
+        }
+      });
     } else {
-      const choice = await vscode.window.showInformationMessage(`${fresh.length} new pull requests from your team.`, "Show Dashboard");
-      if (choice) {
-        dashboard.show();
-      }
+      void vscode.window.showInformationMessage(`${fresh.length} new pull requests from your team.`, "Show Dashboard").then((choice) => choice && dashboard.show());
     }
   };
 
@@ -200,7 +199,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const intervalMs = () => Math.max(30, config().get<number>("refreshIntervalSeconds", 120)) * 1000;
   const refreshIfOlderThan = (ms: number) => {
-    if (vscode.window.state.focused && Date.now() - lastRefresh >= ms && watchOptions().repos.length > 0) {
+    // A visible dashboard stays current even in an unfocused window, for example on a second monitor.
+    const watched = vscode.window.state.focused || dashboard.visible;
+    if (watched && Date.now() - lastRefresh >= ms && watchOptions().repos.length > 0) {
       void refresh();
     }
   };

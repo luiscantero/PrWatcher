@@ -28,10 +28,11 @@ opening links only to find that they are already merged.
   - **approvals** on the latest push against the approvals the branch policy requires (`1/2`,
     green when enough), and *waiting for author* and *rejected* votes; hover for the reviewers and
     their votes, including approvals of an earlier push that no longer count,
-  - **validation builds** (click to open the build) and one icon for the other blocking **branch
+  - **validation builds** (click to open the build) and one icon for the other **branch
     policies**: a lock with the number not met yet (failed or pending), or a green check when all
-    are met; hover for the policies not met and met. Optional policies are left out, except
-    optional builds that failed,
+    are met; hover for the policies not met and met. Optional policies are only shown when they are
+    not met, such as *Link work item*, marked *(optional)*; optional builds only when they
+    failed,
   - unresolved **comment threads**, **merge conflicts** and **auto-complete** (with the merge
     strategy),
   - a blue bar on the left when it needs your review, and *Yours* for your own.
@@ -66,9 +67,10 @@ opening links only to find that they are already merged.
   collapsed under *Merged* at the end of each repository (click to expand); the *Recently closed*
   filter lists them directly.
 
-The dashboard checks for changes every 2 minutes while the VS Code window is focused, and right
-away when you come back to VS Code or to the dashboard (for example after voting in the browser),
-unless it checked in the last 15 seconds. It opens with the pull requests of the last check.
+The dashboard checks for changes every 2 minutes while the VS Code window is focused or the
+dashboard is visible, and right away when you come back to VS Code or to the dashboard (for example
+after voting in the browser), unless it checked in the last 15 seconds. It opens with the pull
+requests of the last check.
 
 ## How the state is determined
 
@@ -145,7 +147,7 @@ and `vssps.dev.azure.com`; nothing is sent anywhere else.
 ## Limitations
 
 - Azure DevOps Services only (`dev.azure.com` and `*.visualstudio.com`), not Azure DevOps Server.
-- Each VS Code window checks on its own while it is focused.
+- Each VS Code window checks on its own while it is focused or shows the dashboard.
 
 ## Install
 

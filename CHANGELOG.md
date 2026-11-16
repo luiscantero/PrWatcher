@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- The dashboard no longer stops updating after a notification about a new pull request was left unanswered, or a request to Azure DevOps did not answer.
+- A visible dashboard updates every 2 minutes even when its window is not focused.
+- Optional policies that are not met, such as *Link work item*, are listed under the policies not met, marked *(optional)*.
+- *Work item linking* is listed as *Link work item*.
+
 ## 0.1.0
 
 - Dashboard tab with the pull requests of watched Azure DevOps repositories: state, approvals on the latest push (`1/2`), *waiting for author* and *rejected* votes, validation builds, blocking branch policies, unresolved comments, merge conflicts and auto-complete.

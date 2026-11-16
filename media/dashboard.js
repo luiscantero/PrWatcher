@@ -174,8 +174,11 @@
       return cell;
     }
     const builds = pr.checks.filter((/** @type {any} */ c) => c.kind === "build" && (c.blocking || c.status === "rejected" || c.status === "broken"));
-    // Optional policies do not block completion, so only blocking ones are shown (and optional builds that failed, above).
-    const others = pr.checks.filter((/** @type {any} */ c) => c.kind !== "build" && c.kind !== "reviewers" && c.blocking);
+    // Blocking policies, plus optional ones that are not met (such as work item linking); optional pending ones,
+    // such as optional reviewers who have not voted, are left out.
+    const others = pr.checks.filter(
+      (/** @type {any} */ c) => c.kind !== "build" && c.kind !== "reviewers" && (c.blocking || c.status === "rejected" || c.status === "broken"),
+    );
     for (const c of builds) {
       const [glyph, cls, text] = CHECK_ICONS[c.status];
       const title = `${c.name}: ${text}${c.blocking ? "" : " (optional)"}`;
@@ -192,7 +195,8 @@
     const met = others.filter((/** @type {any} */ c) => c.status === "approved");
     const unmet = others.filter((/** @type {any} */ c) => c.status !== "approved");
     if (others.length > 0) {
-      const list = (/** @type {any[]} */ cs) => cs.map((c) => `• ${c.name}${c.status === "running" || c.status === "queued" ? " (pending)" : ""}`).join("\n");
+      const list = (/** @type {any[]} */ cs) =>
+        cs.map((c) => `• ${c.name}${c.status === "running" || c.status === "queued" ? " (pending)" : ""}${c.blocking ? "" : " (optional)"}`).join("\n");
       const sections = [unmet.length > 0 ? `Policies not met:\n${list(unmet)}` : "", met.length > 0 ? `Policies met:\n${list(met)}` : ""].filter(Boolean);
       const title = sections.join("\n\n");
       cell.append(
@@ -206,25 +210,31 @@
 
   /** @param {any} pr */
   function extrasCell(pr) {
-    const cell = h("div", { className: "extras" });
-    if (pr.conflicts) {
-      cell.append(icon("warning", "warn", "Merge conflicts"));
-    }
+    // Fixed slots, so each icon stays in its column when another one is missing.
+    const slot = (/** @type {any} */ content) => h("span", { className: "slot" }, content);
+    let comments = null;
     if (pr.unresolvedComments > 0) {
       const title = `${pr.unresolvedComments} unresolved comment thread(s)`;
-      cell.append(h("span", { className: "comments warn", title }, icon("comment-discussion"), String(pr.unresolvedComments)));
+      comments = h("span", { className: "comments warn", title }, icon("comment-discussion"), String(pr.unresolvedComments));
     }
+    let autoComplete = null;
     if (pr.autoComplete) {
       const strategy = pr.autoComplete.mergeStrategy ? `, ${pr.autoComplete.mergeStrategy}` : "";
-      cell.append(icon("rocket", "good", `Auto-complete set by ${pr.autoComplete.setBy}${strategy}`));
+      autoComplete = icon("rocket", "good", `Auto-complete set by ${pr.autoComplete.setBy}${strategy}`);
     }
     const copy = h("button", { className: "icon-button row-action", title: "Copy link", "aria-label": "Copy link" }, icon("copy"));
     copy.addEventListener("click", (e) => {
       e.stopPropagation();
       vscode.postMessage({ type: "copy", text: pr.url });
     });
-    cell.append(copy);
-    return cell;
+    return h(
+      "div",
+      { className: "extras" },
+      slot(pr.conflicts ? icon("warning", "warn", "Merge conflicts") : null),
+      slot(comments),
+      slot(autoComplete),
+      slot(copy),
+    );
   }
 
   /** @param {any} pr @param {any} repo */

@@ -130,6 +130,8 @@ function checkName(e: PolicyEvaluation, kind: CheckKind): string {
       return str(s.defaultDisplayName) ?? str(s.statusName) ?? "Status check";
     case "requiredReviewers":
       return str(s.message) ? `Required reviewers: ${s.message}` : "Required reviewers";
+    case "workItems":
+      return "Link work item";
     default:
       return e.configuration.type.displayName;
   }

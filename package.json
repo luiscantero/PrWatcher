@@ -149,7 +149,7 @@
           "default": 120,
           "minimum": 30,
           "maximum": 3600,
-          "markdownDescription": "How often to check for changes while the VS Code window is focused, in seconds. It also checks right away when the window regains focus or the dashboard is shown, unless it checked in the last 15 seconds."
+          "markdownDescription": "How often to check for changes while the VS Code window is focused or the dashboard is visible, in seconds. It also checks right away when the window regains focus or the dashboard is shown, unless it checked in the last 15 seconds."
         },
         "prWatcher.notifications": {
           "type": "string",

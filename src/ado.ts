@@ -98,6 +98,8 @@ export class AdoClient {
     const started = Date.now();
     const response = await fetch(url, {
       headers: { Authorization: await this.authHeader(organization), Accept: "application/json", "X-TFS-FedAuthRedirect": "Suppress" },
+      // A request that never answers (for example after the network changed) would otherwise block every later refresh.
+      signal: AbortSignal.timeout(60_000),
     });
     this.log?.(`GET ${url} -> ${response.status} (${Date.now() - started} ms)`);
     if (response.status === 401 || response.status === 203) {
