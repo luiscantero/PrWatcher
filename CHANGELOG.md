@@ -11,6 +11,7 @@
 - Merged pull requests are collapsed under a *Merged* row at the end of each repository; the *Recently closed* filter lists them directly.
 - One icon for branch policies: a lock with the policies not met or pending, green when all are met. The *Your review* badge and the check mark next to the approvals are gone; a blue bar marks pull requests that need your review.
 - Shorter labels below the title: *Conflicts*, *Failed <build>*, *Needs review from <reviewer>*, *Needs proof of presence*; states the icon already shows (*Needs review*, *Validation running*, *Ready to complete*, *Merged*) have no label, and the pull request ID moved to the title's tooltip.
+- Tabs *Active* (active pull requests, merged ones collapsed below), *Needs review*, *Mine* and *Recently closed*; the repository badges count active pull requests.
 
 ## 0.1.0
 

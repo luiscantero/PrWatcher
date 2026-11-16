@@ -36,10 +36,11 @@ opening links only to find that they are already merged.
     strategy),
   - a blue bar on the left when it needs your review, and *Yours* for your own.
 
-  Filter by *Needs my review*, *Mine*, *Active* or *Recently closed*, or type to filter by title,
+  The tabs at the top count the active pull requests, those that need your review and yours, and
+  list the recently closed ones; type to filter by title,
   author, branch or state.
 
-  ![Needs my review filter](images/needs-review.png)
+  ![Needs review filter](images/needs-review.png)
 
 - **Watch teams, groups or people per repository**: the pull requests of the members of a team
   (`AIO Connectors Team`), of a group (`[Project]\Group`, nested groups included), of people
@@ -89,7 +90,7 @@ threads:
 - **Blocked** by other blocking policies that are not met, such as comment requirements, work item
   linking or status checks. *Require a merge strategy* is only met when completing, so it is
   ignored until then.
-- **Needs your review** (the blue bar and the *Needs my review* filter) applies to pull requests
+- **Needs your review** (the blue bar and the *Needs review* tab) applies to pull requests
   that still need reviews, that you have not approved
   on their latest push and did not reject or wait on, and that are not yours or drafts. In
   repositories that show everyone's pull requests, only those where you or one of your groups is a

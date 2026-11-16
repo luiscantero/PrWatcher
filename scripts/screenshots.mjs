@@ -312,10 +312,10 @@ async function main() {
       return;
     }
 
-    await frame.locator(".filter", { hasText: "Needs my review" }).click();
+    await frame.locator(".filter", { hasText: "Needs review" }).click();
     await sleep(500);
     await shot("needs-review.png");
-    await frame.locator(".filter", { hasText: "All" }).first().click();
+    await frame.locator(".filter", { hasText: "Active" }).first().click();
 
     // A new pull request appears on the next refresh.
     addNewPr();

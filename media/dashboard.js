@@ -4,6 +4,10 @@
   const vscode = acquireVsCodeApi();
   /** @type {{ filter: string, search: string, flat: boolean, collapsed: Record<string, boolean>, closedOpen: Record<string, boolean> }} */
   const ui = Object.assign({ filter: "all", search: "", flat: false, collapsed: {}, closedOpen: {} }, vscode.getState() || {});
+  // The separate Active filter was merged into the first one.
+  if (ui.filter === "active") {
+    ui.filter = "all";
+  }
   /** @type {any} */
   let state;
 
@@ -208,7 +212,7 @@
     }
     if (pr.unresolvedComments > 0) {
       const title = `${pr.unresolvedComments} unresolved comment thread(s)`;
-      cell.append(h("span", { className: "comments", title }, icon("comment-discussion"), String(pr.unresolvedComments)));
+      cell.append(h("span", { className: "comments warn", title }, icon("comment-discussion"), String(pr.unresolvedComments)));
     }
     if (pr.autoComplete) {
       const strategy = pr.autoComplete.mergeStrategy ? `, ${pr.autoComplete.mergeStrategy}` : "";
@@ -291,9 +295,6 @@
       case "mine":
         if (!pr.mine) return false;
         break;
-      case "active":
-        if (pr.status !== "active") return false;
-        break;
       case "closed":
         if (pr.status === "active") return false;
         break;
@@ -318,10 +319,10 @@
     const all = state ? state.repos.flatMap((/** @type {any} */ r) => r.prs) : [];
     const count = (/** @type {(pr: any) => boolean} */ f) => all.filter(f).length;
     const filters = [
-      ["all", "All", all.length],
-      ["review", "Needs my review", count((pr) => pr.needsMyReview)],
-      ["mine", "Mine", count((pr) => pr.mine)],
-      ["active", "Active", count((pr) => pr.status === "active")],
+      // Active pull requests, with the merged ones collapsed below.
+      ["all", "Active", count((pr) => pr.status === "active")],
+      ["review", "Needs review", count((pr) => pr.needsMyReview)],
+      ["mine", "Mine", count((pr) => pr.mine && pr.status === "active")],
       ["closed", "Recently closed", count((pr) => pr.status !== "active")],
     ];
     const search = /** @type {HTMLInputElement} */ (h("input", { type: "search", placeholder: "Filter by title, author, branch…", value: ui.search, "aria-label": "Filter" }));
@@ -395,7 +396,7 @@
       h("span", { className: "repo-name" }, repo.name),
       h("span", { className: "muted" }, `${repo.organization}/${repo.project}`),
       h("span", { className: "authors", title: "Whose pull requests are shown" }, icon("person"), repo.authorsLabel),
-      h("span", { className: "count" }, String(prs.length)),
+      h("span", { className: "count", title: "Active pull requests" }, String(prs.filter((/** @type {any} */ pr) => pr.status === "active").length)),
       repo.error ? icon("error", "bad", repo.error) : null,
       h("span", { className: "spacer" }),
     );
