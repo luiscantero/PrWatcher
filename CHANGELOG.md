@@ -1,23 +1,12 @@
 # Changelog
 
-## Unreleased
-
-- Authors can be anyone by the name shown for pull request authors, such as agents (`Agency`) and build services (`One Build Service (contoso)`), besides teams, groups and emails.
-- A group that cannot be found is reported on its repository, and the other authors' pull requests are still shown.
-- The dashboard shows approvals as a count (`1/2`) instead of one icon per reviewer, plus counts of *waiting for author* and *rejected* votes; *Waiting for author* and *Rejected* name the reviewers.
-- Optional branch policies, such as optional reviewers, are no longer shown as pending.
-- Coming back to VS Code or to the dashboard, for example after voting in the browser, checks for changes right away.
-- *Needs re-approval after new push* is only shown when the minimum number of approvals is not met, not when another review policy, such as proof of presence, is missing.
-- Merged pull requests are collapsed under a *Merged* row at the end of each repository; the *Recently closed* filter lists them directly.
-- One icon for branch policies: a lock with the policies not met or pending, green when all are met. The *Your review* badge and the check mark next to the approvals are gone; a blue bar marks pull requests that need your review.
-- Shorter labels below the title: *Conflicts*, *Failed <build>*, *Needs review from <reviewer>*, *Needs proof of presence*; states the icon already shows (*Needs review*, *Validation running*, *Ready to complete*, *Merged*) have no label, and the pull request ID moved to the title's tooltip.
-- Tabs *Active* (active pull requests, merged ones collapsed below), *Needs review*, *Mine* and *Recently closed*; the repository badges count active pull requests.
-
 ## 0.1.0
 
-- Dashboard tab with the pull requests of watched Azure DevOps repositories: state, approvals, approvals that a new push made stale, reviewers and votes, validation builds, branch policies, unresolved comments, merge conflicts and auto-complete.
-- Watch the pull requests of teams, groups (including nested groups) or people per repository, or everyone's.
-- Merged pull requests stay listed for 60 hours (`prWatcher.closedRetentionHours`); abandoned ones too if `prWatcher.showAbandoned` is on.
-- Filters for pull requests that need your review, yours, active and recently closed ones, and a text filter.
+- Dashboard tab with the pull requests of watched Azure DevOps repositories: state, approvals on the latest push (`1/2`), *waiting for author* and *rejected* votes, validation builds, blocking branch policies, unresolved comments, merge conflicts and auto-complete.
+- States from the most to the least urgent, with short labels only where the icon cannot say it all, such as *Failed <build>*, *Needs re-approval after new push*, *Needs review from <reviewer>* or *Needs proof of presence*.
+- Watch the pull requests of teams, groups (including nested groups), people, agents such as `Agency` or build services such as `One Build Service (contoso)` per repository, or everyone's.
+- Merged pull requests stay listed for 60 hours (`prWatcher.closedRetentionHours`), collapsed under *Merged* at the end of each repository; abandoned ones too if `prWatcher.showAbandoned` is on.
+- Tabs *Active*, *Needs review*, *Mine* and *Recently closed*, and a text filter.
 - Status bar count of pull requests that need your review, and notifications for new pull requests.
+- Checks for changes every 2 minutes while VS Code is focused, and right away when you come back to it, for example after voting in the browser.
 - Sign in with VS Code's Microsoft account, the Azure CLI or a personal access token.
