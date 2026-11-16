@@ -1,0 +1,221 @@
+{
+  "name": "pr-watcher",
+  "displayName": "PR Watcher for Azure DevOps",
+  "description": "Dashboard of your team's Azure DevOps pull requests: who needs to review, approvals, re-approvals after new pushes, failed validation, blocking policies and auto-complete. Merged PRs stay listed for 60 hours.",
+  "version": "0.1.0",
+  "publisher": "luiscantero",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luiscantero/PrWatcher"
+  },
+  "bugs": {
+    "url": "https://github.com/luiscantero/PrWatcher/issues"
+  },
+  "homepage": "https://github.com/luiscantero/PrWatcher#readme",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "keywords": [
+    "azure devops",
+    "ado",
+    "pull request",
+    "pull requests",
+    "pr",
+    "code review",
+    "review",
+    "dashboard",
+    "team"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onWebviewPanel:prWatcher.dashboard"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "prWatcher.openDashboard",
+        "title": "Open Dashboard",
+        "category": "PR Watcher",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "prWatcher.refresh",
+        "title": "Refresh",
+        "category": "PR Watcher",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "prWatcher.addRepository",
+        "title": "Add Repository…",
+        "category": "PR Watcher",
+        "icon": "$(add)"
+      },
+      {
+        "command": "prWatcher.removeRepository",
+        "title": "Remove Repository…",
+        "category": "PR Watcher"
+      },
+      {
+        "command": "prWatcher.editAuthors",
+        "title": "Edit Watched Authors…",
+        "category": "PR Watcher"
+      },
+      {
+        "command": "prWatcher.signIn",
+        "title": "Sign In to Azure DevOps",
+        "category": "PR Watcher"
+      },
+      {
+        "command": "prWatcher.setPersonalAccessToken",
+        "title": "Set Personal Access Token…",
+        "category": "PR Watcher"
+      },
+      {
+        "command": "prWatcher.showLog",
+        "title": "Show Log",
+        "category": "PR Watcher"
+      }
+    ],
+    "configuration": {
+      "title": "PR Watcher",
+      "properties": {
+        "prWatcher.repositories": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "Repository URL, for example https://dev.azure.com/contoso/Project/_git/repo."
+              },
+              {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Repository URL, for example https://dev.azure.com/contoso/Project/_git/repo. Pull request, clone and SSH URLs work too."
+                  },
+                  "authors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Whose pull requests to show: team names of the repository's project, groups such as [Project]\\Group, emails, or the name shown for pull request authors, such as Agency or One Build Service (contoso). \"*\" shows everyone. When missing or empty, prWatcher.authors applies."
+                  }
+                }
+              }
+            ]
+          },
+          "markdownDescription": "Azure DevOps repositories to watch. Use *PR Watcher: Add Repository…* or add entries such as `{ \"url\": \"https://dev.azure.com/contoso/Project/_git/repo\", \"authors\": [\"My Team\"] }`. `authors` overrides `#prWatcher.authors#` for that repository."
+        },
+        "prWatcher.authors": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "Whose pull requests to show in repositories without their own `authors`: team names (looked up in each repository's project), groups such as `[Project]\\Group` or `[TEAM FOUNDATION]\\Group`, emails, or the name shown for pull request authors, such as `Agency` or `One Build Service (contoso)`. Empty or `*` shows everyone's."
+        },
+        "prWatcher.closedRetentionHours": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 720,
+          "markdownDescription": "How long merged and abandoned pull requests stay listed after they were closed, in hours, so late reviewers can still leave comments."
+        },
+        "prWatcher.showAbandoned": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "List abandoned pull requests for `#prWatcher.closedRetentionHours#` too, like merged ones."
+        },
+        "prWatcher.showDrafts": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "List draft pull requests. Drafts never count as needing your review."
+        },
+        "prWatcher.refreshIntervalSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 30,
+          "maximum": 3600,
+          "markdownDescription": "How often to check for changes while the VS Code window is focused, in seconds. It also checks right away when the window regains focus or the dashboard is shown, unless it checked in the last 15 seconds."
+        },
+        "prWatcher.notifications": {
+          "type": "string",
+          "enum": [
+            "off",
+            "reviewRequested",
+            "all"
+          ],
+          "enumDescriptions": [
+            "No notifications.",
+            "New pull requests where you or one of your teams is a reviewer.",
+            "Every new pull request from the watched authors, except your own."
+          ],
+          "default": "all",
+          "markdownDescription": "Show a notification when a new pull request appears."
+        },
+        "prWatcher.statusBar": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Show the number of pull requests that need your review in the status bar."
+        },
+        "prWatcher.authentication": {
+          "type": "string",
+          "enum": [
+            "microsoft",
+            "azureCli",
+            "pat"
+          ],
+          "enumDescriptions": [
+            "Sign in with the Microsoft account of VS Code (Accounts menu).",
+            "Use the account of the Azure CLI (az login).",
+            "Use a personal access token with Code (Read) scope, stored in VS Code's secret storage (PR Watcher: Set Personal Access Token…)."
+          ],
+          "default": "microsoft",
+          "markdownDescription": "How to authenticate to Azure DevOps."
+        },
+        "prWatcher.tenant": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Microsoft Entra tenant ID or domain to sign in to, when `#prWatcher.authentication#` is `microsoft` and your Azure DevOps organization is not in your account's home tenant."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package-bundle",
+    "compile": "npm run check-types && node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package-bundle": "npm run check-types && node esbuild.mjs --production",
+    "check-types": "tsc -p . --noEmit",
+    "compile-tests": "tsc -p . --outDir out",
+    "pretest": "npm run compile && npm run compile-tests",
+    "test": "mocha --ui tdd \"out/test/unit/**/*.test.js\"",
+    "package": "vsce package",
+    "screenshots": "npm run compile && node scripts/screenshots.mjs"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.43",
+    "@types/vscode": "~1.145.0",
+    "@vscode/codicons": "^0.0.45",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "mocha": "^12.0.3",
+    "playwright-core": "^1.65.0",
+    "typescript": "^7.0.2"
+  }
+}
