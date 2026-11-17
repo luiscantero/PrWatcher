@@ -325,12 +325,13 @@ export function validationSummary(checks: readonly CheckView[]): Summary {
   };
 }
 
-// Proof of presence is listed with the policies, although it also keeps the pull request in review.
-const REVIEW_KINDS: CheckKind[] = ["reviewers", "requiredReviewers"];
+// Proof of presence is listed with the policies, although it also keeps the pull request in review. Comment
+// requirements are left out: the comments icon shows the unresolved threads.
+const NOT_POLICY_ICON: CheckKind[] = ["reviewers", "requiredReviewers", "comments"];
 
 /** Other branch policies: required ones not met (or pending), optional ones that block auto-complete, those made optional, then met. */
 export function policySummary(checks: readonly CheckView[]): Summary {
-  const policies = checks.filter((c) => c.kind !== "build" && !REVIEW_KINDS.includes(c.kind));
+  const policies = checks.filter((c) => c.kind !== "build" && !NOT_POLICY_ICON.includes(c.kind));
   const requiredUnmet = policies.filter((c) => c.blocking && c.status !== "approved");
   // Optional policies only matter once they failed; pending ones would just be noise.
   const optionalUnmet = policies.filter((c) => !c.blocking && !c.ignored && isFailed(c));

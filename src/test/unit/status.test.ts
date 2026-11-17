@@ -253,10 +253,10 @@ suite("status", () => {
     );
     assert.strictEqual(bad.level, "bad");
     assert.deepStrictEqual(bad.sections, [
-      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Proof Of Presence", "Link work item (optional, blocks auto-complete)"] },
+      { heading: "Not met", items: ["Scan (pending)", "Proof Of Presence", "Link work item (optional, blocks auto-complete)"] },
       { heading: "Met", items: ["License"] },
     ]);
-    assert.strictEqual(summary(evaluation("Work item linking", "rejected", { blocking: false }), evaluation("Comment requirements", "approved")).level, "warn");
+    assert.strictEqual(summary(evaluation("Work item linking", "rejected", { blocking: false }), evaluation("Status", "approved")).level, "warn");
     assert.strictEqual(summary(evaluation("Work item linking", "queued", { blocking: false })).level, "none");
   });
 
@@ -266,6 +266,7 @@ suite("status", () => {
       evaluations: [
         evaluation("Work item linking", "rejected", { blocking: false, id: 7 }),
         evaluation("Comment requirements", "approved", { id: 2 }),
+        evaluation("Status", "approved", { id: 4, settings: { statusName: "License" } }),
         evaluation("Build", "rejected", { blocking: false, id: 8, settings: { displayName: "Cleanup" } }),
         evaluation("Build", "running", { blocking: false, id: 9, settings: { displayName: "Upgrade" } }),
         evaluation("Build", "approved", { id: 3, settings: { displayName: "PR" } }),
@@ -275,7 +276,7 @@ suite("status", () => {
       level: "good",
       sections: [
         { heading: "Made optional", items: ["Link work item"] },
-        { heading: "Met", items: ["Comment requirements"] },
+        { heading: "Met", items: ["License"] },
       ],
     });
     assert.strictEqual(v.validationSummary.level, "good");

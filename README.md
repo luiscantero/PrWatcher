@@ -38,7 +38,8 @@ opening links only to find that they are already merged.
        open the most urgent build.
     3. **Branch policies** (a lock): red when a required policy is not met or still pending, orange
        when an optional one failed (marked *(optional, blocks auto-complete)*, such as *Link work
-       item*), green when all are met. Proof of presence is listed here too.
+       item*), green when all are met. Proof of presence is listed here too; comment requirements
+       are not, since the comments icon shows them.
 
     Required policies and builds block completing the pull request. Optional ones only block
     auto-complete, until someone clicks *Make optional* on the pull request: then they block

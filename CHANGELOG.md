@@ -9,6 +9,7 @@
 - *Export Settings…* and *Import Settings…* share the watched repositories, authors and other settings with your team as a JSON file; importing can add to or replace your own.
 - The validation icon also spins, in green, while optional builds run, since auto-complete waits for them.
 - Optional policies and builds that were made optional for a pull request (*Make optional*, so auto-complete ignores them) are listed under *Made optional* and no longer turn the icons orange; the others are marked *(optional, blocks auto-complete)*.
+- The lock no longer lists *Comment requirements*; the comments icon shows the unresolved threads.
 
 ## 0.1.1
 
