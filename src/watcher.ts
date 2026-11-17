@@ -1,6 +1,6 @@
 import { AdoClient, AdoError, AuthError, IdentityRef, PullRequest } from "./ado";
 import { AuthorSpec, ConfigProblem, WatchedRepo, repoWebUrl } from "./config";
-import { PrView, countUnresolved, isRetained, toPrView } from "./status";
+import { PrView, countThreads, isRetained, toPrView } from "./status";
 
 export interface RepoView {
   key: string;
@@ -155,13 +155,13 @@ export class Watcher {
         const groupIds = viewer ? await this.viewerGroups(repo.organization, viewer.id, prs) : new Set<string>();
         base.prs = await mapLimit(prs, 6, async (pr) => {
           let evaluations;
-          let unresolvedComments;
+          let comments;
           if (pr.status === "active") {
-            [evaluations, unresolvedComments] = await Promise.all([
+            [evaluations, comments] = await Promise.all([
               this.client.policyEvaluations(repo.organization, pr.repository.project.id, pr.pullRequestId).catch((e) => this.soft(e, `policies of !${pr.pullRequestId}`)),
               this.client
                 .threads(repo, pr.pullRequestId)
-                .then(countUnresolved)
+                .then(countThreads)
                 .catch((e) => this.soft(e, `comments of !${pr.pullRequestId}`)),
             ]);
           }
@@ -170,7 +170,7 @@ export class Watcher {
             repoKey: repo.key,
             webUrl,
             evaluations,
-            unresolvedComments,
+            comments,
             viewer: viewer ? { id: viewer.id, groupIds } : undefined,
             watchedAuthors: !filter.everyone,
             retentionHours: options.retentionHours,

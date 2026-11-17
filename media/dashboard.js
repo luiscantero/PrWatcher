@@ -120,121 +120,79 @@
   /** Phases whose icon says it all, so their label is only in the icon's tooltip. */
   const QUIET_PHASES = new Set(["validationRunning", "ready", "merged", "abandoned"]);
 
-  const CHECK_ICONS = {
-    approved: ["pass", "good", "passed"],
-    rejected: ["error", "bad", "failed"],
-    broken: ["warning", "bad", "broken"],
-    expired: ["history", "warn", "expired, queue it again"],
-    running: ["sync~spin", "info", "running"],
-    queued: ["clock", "info", "queued"],
-  };
+  const LEVEL_CLASS = { bad: "bad", warn: "warn", running: "info", good: "good", none: "faded" };
 
-  /** @param {number} vote */
-  function voteText(vote) {
-    if (vote >= 10) return "approved";
-    if (vote >= 5) return "approved with suggestions";
-    if (vote <= -10) return "rejected";
-    if (vote <= -5) return "waiting for author";
-    return "no vote yet";
+  /**
+   * The tooltip of a summary: its sections, most urgent first.
+   * @param {{ sections: { heading: string, items: string[] }[] }} summary @param {string} empty
+   */
+  function summaryTitle(summary, empty) {
+    if (summary.sections.length === 0) {
+      return empty;
+    }
+    return summary.sections.map((s) => `${s.heading}:\n${s.items.map((i) => `• ${i}`).join("\n")}`).join("\n\n");
   }
 
-  /** @param {any} pr */
-  function reviewersCell(pr) {
-    const cell = h("div", { className: "reviewers" });
+  /** @param {string} cls @param {string} title @param {...any} children */
+  function statusIcon(cls, title, ...children) {
+    return h("div", { className: `status ${cls}`, title, "aria-label": title, role: "img" }, ...children);
+  }
+
+  /**
+   * Five status icons in fixed columns: approvals, validation builds, other policies, comments and auto-complete,
+   * then the copy button.
+   * @param {any} pr
+   */
+  function statusCells(pr) {
     if (pr.status !== "active") {
-      return cell;
+      return [h("div", {}), h("div", {}), h("div", {}), h("div", {}), h("div", {}), copyButton(pr)];
     }
-    const lines = [...pr.reviewers]
-      .sort((/** @type {any} */ a, /** @type {any} */ b) => Number(b.required) - Number(a.required) || b.vote - a.vote || Number(a.group) - Number(b.group))
-      .map((/** @type {any} */ r) => {
-        const notes = [r.required ? "required" : "", r.stale ? "of an earlier push" : "", r.declined ? "declined" : "", r.me ? (r.group ? "your group" : "you") : ""].filter(Boolean);
-        return `• ${r.name}: ${voteText(r.vote)}${notes.length ? ` (${notes.join(", ")})` : ""}`;
+    const a = pr.approvalSummary;
+    const count = pr.requiredApprovals !== undefined ? `${pr.approvals}/${pr.requiredApprovals}` : String(pr.approvals);
+    const approvals = statusIcon(`approvals ${LEVEL_CLASS[a.level]}`, summaryTitle(a, "No reviewers"), count);
+
+    const v = pr.validationSummary;
+    const validationGlyph = { bad: "error", warn: "error", running: "sync~spin", good: "pass", none: "pass" }[v.level];
+    const validation = statusIcon(`${LEVEL_CLASS[v.level]}${v.url ? " link" : ""}`, summaryTitle(v, "No validation builds"), icon(validationGlyph));
+    if (v.url) {
+      validation.addEventListener("click", (e) => {
+        e.stopPropagation();
+        open(v.url);
       });
-    cell.title = lines.length > 0 ? `Reviewers:\n${lines.join("\n")}` : "No reviewers";
-    const needed = pr.requiredApprovals;
-    const enough = needed !== undefined ? pr.approvals >= needed : pr.approvals > 0;
-    cell.append(h("span", { className: `approvals ${enough ? "good" : "muted"}` }, needed !== undefined ? `${pr.approvals}/${needed}` : `${pr.approvals}`));
-    const people = pr.reviewers.filter((/** @type {any} */ r) => !r.group);
-    const extra = [
-      { count: people.filter((/** @type {any} */ r) => r.vote === -5).length, glyph: "debug-pause", cls: "warn" },
-      { count: people.filter((/** @type {any} */ r) => r.vote === -10).length, glyph: "close", cls: "bad" },
-    ];
-    for (const e of extra) {
-      if (e.count > 0) {
-        cell.append(h("span", { className: `approvals ${e.cls}` }, icon(e.glyph), String(e.count)));
-      }
     }
-    return cell;
+
+    const p = pr.policySummary;
+    const policies = statusIcon(LEVEL_CLASS[p.level], summaryTitle(p, "No other branch policies"), icon(p.level === "good" || p.level === "none" ? "unlock" : "lock"));
+
+    const c = pr.comments;
+    let comments;
+    if (!c) {
+      comments = statusIcon("faded", "Comments could not be loaded", icon("comment-discussion"));
+    } else if (c.unresolved > 0) {
+      const resolved = c.resolved > 0 ? `\n${c.resolved} resolved` : "";
+      comments = statusIcon("warn", `${c.unresolved} unresolved comment thread${c.unresolved === 1 ? "" : "s"}${resolved}`, icon("comment-discussion"), String(c.unresolved));
+    } else if (c.resolved > 0) {
+      comments = statusIcon("good", `All ${c.resolved} comment thread${c.resolved === 1 ? "" : "s"} resolved`, icon("comment-discussion"));
+    } else {
+      comments = statusIcon("faded", "No comments", icon("comment-discussion"));
+    }
+
+    const ac = pr.autoComplete;
+    const autoComplete = ac
+      ? statusIcon("good", `Auto-complete set by ${ac.setBy}${ac.mergeStrategy ? `, ${ac.mergeStrategy}` : ""}`, icon("rocket"))
+      : statusIcon("faded", "Auto-complete not set", icon("rocket"));
+
+    return [approvals, validation, policies, comments, autoComplete, copyButton(pr)];
   }
 
   /** @param {any} pr */
-  function checksCell(pr) {
-    const cell = h("div", { className: "checks" });
-    if (pr.status !== "active") {
-      return cell;
-    }
-    const builds = pr.checks.filter((/** @type {any} */ c) => c.kind === "build" && (c.blocking || c.status === "rejected" || c.status === "broken"));
-    // Blocking policies, plus optional ones that are not met (such as work item linking); optional pending ones,
-    // such as optional reviewers who have not voted, are left out.
-    const others = pr.checks.filter(
-      (/** @type {any} */ c) => c.kind !== "build" && c.kind !== "reviewers" && (c.blocking || c.status === "rejected" || c.status === "broken"),
-    );
-    for (const c of builds) {
-      const [glyph, cls, text] = CHECK_ICONS[c.status];
-      const title = `${c.name}: ${text}${c.blocking ? "" : " (optional)"}`;
-      const el = h("span", { className: `check${c.blocking ? "" : " optional"}${c.url ? " link" : ""}`, title }, icon(glyph, cls, title));
-      if (c.url) {
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
-          open(c.url);
-        });
-      }
-      cell.append(el);
-    }
-    // One icon for the other policies: a lock with the unmet (or pending) ones, green when all are met.
-    const met = others.filter((/** @type {any} */ c) => c.status === "approved");
-    const unmet = others.filter((/** @type {any} */ c) => c.status !== "approved");
-    if (others.length > 0) {
-      const list = (/** @type {any[]} */ cs) =>
-        cs.map((c) => `• ${c.name}${c.status === "running" || c.status === "queued" ? " (pending)" : ""}${c.blocking ? "" : " (optional)"}`).join("\n");
-      const sections = [unmet.length > 0 ? `Policies not met:\n${list(unmet)}` : "", met.length > 0 ? `Policies met:\n${list(met)}` : ""].filter(Boolean);
-      const title = sections.join("\n\n");
-      cell.append(
-        unmet.length > 0
-          ? h("span", { className: "check summary warn", title }, icon("lock"), String(unmet.length))
-          : h("span", { className: "check summary good", title }, icon("pass"), String(met.length)),
-      );
-    }
-    return cell;
-  }
-
-  /** @param {any} pr */
-  function extrasCell(pr) {
-    // Fixed slots, so each icon stays in its column when another one is missing.
-    const slot = (/** @type {any} */ content) => h("span", { className: "slot" }, content);
-    let comments = null;
-    if (pr.unresolvedComments > 0) {
-      const title = `${pr.unresolvedComments} unresolved comment thread(s)`;
-      comments = h("span", { className: "comments warn", title }, icon("comment-discussion"), String(pr.unresolvedComments));
-    }
-    let autoComplete = null;
-    if (pr.autoComplete) {
-      const strategy = pr.autoComplete.mergeStrategy ? `, ${pr.autoComplete.mergeStrategy}` : "";
-      autoComplete = icon("rocket", "good", `Auto-complete set by ${pr.autoComplete.setBy}${strategy}`);
-    }
+  function copyButton(pr) {
     const copy = h("button", { className: "icon-button row-action", title: "Copy link", "aria-label": "Copy link" }, icon("copy"));
     copy.addEventListener("click", (e) => {
       e.stopPropagation();
       vscode.postMessage({ type: "copy", text: pr.url });
     });
-    return h(
-      "div",
-      { className: "extras" },
-      slot(pr.conflicts ? icon("warning", "warn", "Merge conflicts") : null),
-      slot(comments),
-      slot(autoComplete),
-      slot(copy),
-    );
+    return h("div", {}, copy);
   }
 
   /** @param {any} pr @param {any} repo */
@@ -283,9 +241,7 @@
           h("span", { className: "branch", title: `${pr.source} → ${pr.target}` }, ` · → ${pr.target}`),
         ),
       ),
-      reviewersCell(pr),
-      checksCell(pr),
-      extrasCell(pr),
+      ...statusCells(pr),
     );
     el.addEventListener("click", () => open(pr.url));
     el.addEventListener("keydown", (e) => {

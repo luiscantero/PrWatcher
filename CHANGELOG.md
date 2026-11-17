@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Five status icons in fixed columns: approvals, validation builds, branch policies, comments and auto-complete. Each is red, orange, green or faded, and its tooltip lists the details from the most to the least urgent.
+
 ## 0.1.1
 
 - The dashboard no longer stops updating after a notification about a new pull request was left unanswered, or a request to Azure DevOps did not answer.

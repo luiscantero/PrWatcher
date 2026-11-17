@@ -35,6 +35,23 @@ export interface CheckView {
   url?: string;
 }
 
+/**
+ * One status icon of a pull request: its color, and the tooltip's sections from the most to the least
+ * urgent, so that what is left once the problems are solved is green.
+ */
+export interface Summary {
+  /** bad: red; warn: orange; running: in progress; good: green; none: nothing to show (faded). */
+  level: "bad" | "warn" | "running" | "good" | "none";
+  sections: { heading: string; items: string[] }[];
+  /** For validations, the build to open on click: the most urgent one. */
+  url?: string;
+}
+
+export interface ThreadCounts {
+  unresolved: number;
+  resolved: number;
+}
+
 export interface ReviewerView {
   id: string;
   name: string;
@@ -71,7 +88,11 @@ export interface PrView {
   checks: CheckView[];
   conflicts: boolean;
   autoComplete?: { setBy: string; mergeStrategy?: string };
-  unresolvedComments?: number;
+  /** Comment threads written by people; undefined when they could not be loaded. */
+  comments?: ThreadCounts;
+  approvalSummary: Summary;
+  validationSummary: Summary;
+  policySummary: Summary;
   mine: boolean;
   myVote?: number;
   /** You or one of your groups is a reviewer. */
@@ -247,13 +268,72 @@ function lastIterationApprovers(evaluations: readonly PolicyEvaluation[]): { req
   return { required, ids };
 }
 
+const optional = (c: CheckView) => (c.blocking ? c.name : `${c.name} (optional)`);
+const isFailed = (c: CheckView) => c.status === "rejected" || c.status === "broken" || c.status === "expired";
+const isRunning = (c: CheckView) => c.status === "running" || c.status === "queued";
+const sections = (list: [string, string[]][]) => list.filter(([, items]) => items.length > 0).map(([heading, items]) => ({ heading, items }));
+
+/** Validation builds: required failures, then running builds, optional failures and passed builds. */
+export function validationSummary(checks: readonly CheckView[]): Summary {
+  const builds = checks.filter((c) => c.kind === "build");
+  const failed = builds.filter(isFailed).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const running = builds.filter(isRunning).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const passed = builds.filter((c) => c.status === "approved");
+  const label = (c: CheckView) => `${optional(c)}${c.status === "expired" ? " (expired)" : ""}${c.status === "queued" ? " (queued)" : ""}`;
+  let level: Summary["level"] = "none";
+  if (failed.some((c) => c.blocking)) {
+    level = "bad";
+  } else if (running.some((c) => c.blocking)) {
+    level = "running";
+  } else if (failed.length > 0) {
+    level = "warn";
+  } else if (builds.length > 0) {
+    level = "good";
+  }
+  return {
+    level,
+    sections: sections([
+      ["Failed", failed.map(label)],
+      ["Running", running.map(label)],
+      ["Passed", passed.map(label)],
+    ]),
+    url: (failed[0] ?? running[0] ?? passed[0])?.url,
+  };
+}
+
+const REVIEW_KINDS: CheckKind[] = ["reviewers", "requiredReviewers", "proofOfPresence"];
+
+/** Other branch policies: required ones not met (or pending), then optional ones not met, then met. */
+export function policySummary(checks: readonly CheckView[]): Summary {
+  const policies = checks.filter((c) => c.kind !== "build" && !REVIEW_KINDS.includes(c.kind));
+  const requiredUnmet = policies.filter((c) => c.blocking && c.status !== "approved");
+  // Optional policies only matter once they failed; pending ones would just be noise.
+  const optionalUnmet = policies.filter((c) => !c.blocking && isFailed(c));
+  const met = policies.filter((c) => c.blocking && c.status === "approved");
+  let level: Summary["level"] = "none";
+  if (requiredUnmet.length > 0) {
+    level = "bad";
+  } else if (optionalUnmet.length > 0) {
+    level = "warn";
+  } else if (met.length > 0) {
+    level = "good";
+  }
+  return {
+    level,
+    sections: sections([
+      ["Not met", [...requiredUnmet.map((c) => `${c.name}${isRunning(c) ? " (pending)" : ""}`), ...optionalUnmet.map(optional)]],
+      ["Met", met.map((c) => c.name)],
+    ]),
+  };
+}
+
 export interface PrInput {
   pr: PullRequest;
   repoKey: string;
   webUrl: string;
   /** Undefined for closed pull requests, or when they could not be loaded. */
   evaluations?: readonly PolicyEvaluation[];
-  unresolvedComments?: number;
+  comments?: ThreadCounts;
   viewer?: Viewer;
   /** The repository watches specific authors (a team, group or people) rather than everyone. */
   watchedAuthors: boolean;
@@ -366,6 +446,41 @@ export function toPrView(input: PrInput): PrView {
   const expires = closed ? new Date(Date.parse(closed) + input.retentionHours * 3_600_000).toISOString() : undefined;
   const strip = (ref: string) => ref.replace(/^refs\/heads\//, "");
 
+  // Approvals: rejections, waiting for author, what is missing, approvals of an earlier push, then approvals.
+  const rejecting = people.filter((r) => r.vote === -10).map((r) => r.name);
+  const waiting = people.filter((r) => r.vote === -5).map((r) => r.name);
+  const missing: string[] = [];
+  if (reviewPending) {
+    const reviewerPolicyPending = blockingPending.some((c) => c.kind === "reviewers");
+    const noReviewerPolicy = checks.every((c) => c.kind !== "reviewers");
+    const missingCount = reviewerPolicyPending && requiredApprovals !== undefined ? requiredApprovals - approvals : noReviewerPolicy && approvals === 0 ? 1 : 0;
+    if (missingCount > 0) {
+      missing.push(`${missingCount} more approval${missingCount === 1 ? "" : "s"}`);
+    }
+    missing.push(...pendingRequired.map((name) => `${name} (required)`));
+    for (const c of blockingPending.filter((c) => c.kind === "requiredReviewers" || c.kind === "proofOfPresence")) {
+      missing.push(c.kind === "proofOfPresence" ? "Proof of presence" : c.name);
+    }
+  }
+  let approvalLevel: Summary["level"];
+  if (rejecting.length > 0 || (reviewPending && approvals === 0)) {
+    approvalLevel = "bad";
+  } else if (waiting.length > 0 || reviewPending) {
+    approvalLevel = "warn";
+  } else {
+    approvalLevel = "good";
+  }
+  const approvalSummary: Summary = {
+    level: approvalLevel,
+    sections: sections([
+      ["Rejected by", rejecting],
+      ["Waiting for author", waiting],
+      ["Missing", missing],
+      ["Approved an earlier push", people.filter((r) => r.stale).map((r) => r.name)],
+      ["Approved", people.filter((r) => r.vote >= 5 && !r.stale).map((r) => (r.vote < 10 ? `${r.name} (with suggestions)` : r.name))],
+    ]),
+  };
+
   return {
     key: `${input.repoKey}#${pr.pullRequestId}`,
     id: pr.pullRequestId,
@@ -388,7 +503,10 @@ export function toPrView(input: PrInput): PrView {
     checks,
     conflicts,
     autoComplete: pr.autoCompleteSetBy ? { setBy: pr.autoCompleteSetBy.displayName, mergeStrategy: pr.completionOptions?.mergeStrategy } : undefined,
-    unresolvedComments: input.unresolvedComments,
+    comments: input.comments,
+    approvalSummary,
+    validationSummary: validationSummary(checks),
+    policySummary: policySummary(checks),
     mine,
     myVote,
     reviewRequested,
@@ -407,14 +525,20 @@ export function toPrView(input: PrInput): PrView {
   };
 }
 
-/** Threads that still need attention: active or pending, not deleted, and written by people. */
-export function countUnresolved(threads: readonly { status?: string; isDeleted?: boolean; comments?: { commentType?: string; isDeleted?: boolean }[] }[]): number {
-  return threads.filter(
-    (t) =>
-      !t.isDeleted &&
-      (t.status === "active" || t.status === "pending") &&
-      (t.comments ?? []).some((c) => !c.isDeleted && c.commentType !== "system"),
-  ).length;
+/** Comment threads written by people (not system messages), unresolved (active or pending) and resolved. */
+export function countThreads(threads: readonly { status?: string; isDeleted?: boolean; comments?: { commentType?: string; isDeleted?: boolean }[] }[]): ThreadCounts {
+  const counts: ThreadCounts = { unresolved: 0, resolved: 0 };
+  for (const t of threads) {
+    if (t.isDeleted || !t.status || t.status === "unknown" || !(t.comments ?? []).some((c) => !c.isDeleted && c.commentType !== "system")) {
+      continue;
+    }
+    if (t.status === "active" || t.status === "pending") {
+      counts.unresolved++;
+    } else {
+      counts.resolved++;
+    }
+  }
+  return counts;
 }
 
 /** Whether a closed pull request is still within the retention window. */

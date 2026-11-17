@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { PolicyEvaluation, PullRequest, Reviewer } from "../../ado";
-import { countUnresolved, isRetained, toPrView } from "../../status";
+import { countThreads, isRetained, toPrView } from "../../status";
 
 const ME = "me-id";
 const AUTHOR = "author-id";
@@ -177,17 +177,75 @@ suite("status", () => {
     assert.strictEqual(view({ pr: { mergeStatus: "conflicts" } }).phase, "conflicts");
   });
 
-  test("unresolved threads exclude system, resolved and deleted threads", () => {
-    assert.strictEqual(
-      countUnresolved([
+  test("comment threads count unresolved and resolved ones written by people", () => {
+    assert.deepStrictEqual(
+      countThreads([
         { status: "active", comments: [{ commentType: "text" }] },
         { status: "pending", comments: [{ commentType: "text" }] },
         { status: "active", comments: [{ commentType: "system" }] },
         { status: "fixed", comments: [{ commentType: "text" }] },
+        { status: "closed", comments: [{ commentType: "text" }] },
         { status: "active", isDeleted: true, comments: [{ commentType: "text" }] },
         { comments: [{ commentType: "system" }] },
       ]),
-      2,
+      { unresolved: 2, resolved: 2 },
     );
+  });
+
+  test("the approvals summary lists, from the most urgent, rejections, waiting, what is missing, stale and current approvals", () => {
+    const v = view({
+      pr: { reviewers: [reviewer("ana", 10), reviewer("bo", -5), reviewer("cy", 10), reviewer("dee", 0, { isRequired: true })] },
+      evaluations: [{ ...minReviewers("queued", ["ana"]), configuration: { ...minReviewers("queued").configuration, settings: { minimumApproverCount: 2, requireVoteOnLastIteration: true } } }],
+    });
+    assert.strictEqual(v.approvalSummary.level, "warn");
+    assert.deepStrictEqual(v.approvalSummary.sections, [
+      { heading: "Waiting for author", items: ["bo"] },
+      { heading: "Missing", items: ["1 more approval", "dee (required)"] },
+      { heading: "Approved an earlier push", items: ["cy"] },
+      { heading: "Approved", items: ["ana"] },
+    ]);
+    assert.strictEqual(view({ evaluations: [minReviewers("queued")] }).approvalSummary.level, "bad");
+    assert.strictEqual(view({ pr: { reviewers: [reviewer("ana", -10), reviewer("bo", 10)] }, evaluations: [minReviewers("approved", ["bo"])] }).approvalSummary.level, "bad");
+    assert.deepStrictEqual(view({ pr: { reviewers: [reviewer("ana", 10)] }, evaluations: [minReviewers("approved", ["ana"])] }).approvalSummary, {
+      level: "good",
+      sections: [{ heading: "Approved", items: ["ana"] }],
+    });
+  });
+
+  test("the validation summary is red for a required failure, running while required builds run, orange for optional failures", () => {
+    const build = (name: string, status: PolicyEvaluation["status"], blocking = true, buildId = 1) =>
+      evaluation("Build", status, { blocking, settings: { displayName: name }, context: { buildId } });
+    const summary = (...evaluations: PolicyEvaluation[]) => view({ evaluations }).validationSummary;
+    const bad = summary(build("Lint", "rejected", false, 1), build("PR", "rejected", true, 2), build("E2E", "running", true, 3), build("Docs", "approved", true, 4));
+    assert.strictEqual(bad.level, "bad");
+    assert.deepStrictEqual(bad.sections, [
+      { heading: "Failed", items: ["PR", "Lint (optional)"] },
+      { heading: "Running", items: ["E2E"] },
+      { heading: "Passed", items: ["Docs"] },
+    ]);
+    assert.match(bad.url ?? "", /buildId=2$/);
+    assert.strictEqual(summary(build("Lint", "rejected", false), build("PR", "running")).level, "running");
+    assert.strictEqual(summary(build("Lint", "rejected", false), build("PR", "approved")).level, "warn");
+    assert.strictEqual(summary(build("PR", "approved")).level, "good");
+    assert.strictEqual(summary().level, "none");
+  });
+
+  test("the policy summary is red for unmet required policies, orange for failed optional ones, and leaves out review policies", () => {
+    const summary = (...evaluations: PolicyEvaluation[]) => view({ evaluations }).policySummary;
+    const bad = summary(
+      evaluation("Work item linking", "rejected", { blocking: false }),
+      evaluation("Comment requirements", "rejected"),
+      evaluation("Status", "running", { settings: { statusName: "Scan" } }),
+      evaluation("Status", "approved", { settings: { statusName: "License" } }),
+      evaluation("Proof Of Presence", "rejected"),
+      minReviewers("queued"),
+    );
+    assert.strictEqual(bad.level, "bad");
+    assert.deepStrictEqual(bad.sections, [
+      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Link work item (optional)"] },
+      { heading: "Met", items: ["License"] },
+    ]);
+    assert.strictEqual(summary(evaluation("Work item linking", "rejected", { blocking: false }), evaluation("Comment requirements", "approved")).level, "warn");
+    assert.strictEqual(summary(evaluation("Work item linking", "queued", { blocking: false })).level, "none");
   });
 });

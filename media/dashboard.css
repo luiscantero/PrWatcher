@@ -223,7 +223,7 @@ button.primary:hover {
 
 .pr {
   display: grid;
-  grid-template-columns: 24px minmax(240px, 1fr) 130px 150px 112px;
+  grid-template-columns: 24px minmax(240px, 1fr) 44px 24px 24px 40px 24px 24px;
   align-items: center;
   column-gap: 12px;
   padding: 6px 8px;
@@ -244,8 +244,7 @@ button.primary:hover {
   border-left-color: var(--vscode-charts-blue, var(--vscode-focusBorder));
 }
 
-.pr.closed .main,
-.pr.closed .reviewers {
+.pr.closed .main {
   opacity: 0.7;
 }
 
@@ -315,46 +314,25 @@ button.primary:hover {
   color: var(--vscode-descriptionForeground);
 }
 
-.reviewers,
-.checks,
-.extras {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.extras {
-  display: grid;
-  grid-template-columns: 18px 36px 18px 24px;
-  justify-content: end;
-}
-
-.extras .slot {
+.status {
   display: inline-flex;
   align-items: center;
-}
-
-.approvals,
-.comments,
-.check.summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
   font-size: 12px;
-  margin-right: 4px;
 }
 
-.check {
-  display: inline-flex;
+.status.approvals {
+  justify-content: flex-start;
 }
 
-.check.link {
+.status.link {
   cursor: pointer;
 }
 
-.check.optional {
-  opacity: 0.6;
+.faded {
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.35;
 }
 
 .row-action {
@@ -390,12 +368,8 @@ button.primary:hover {
   color: var(--vscode-descriptionForeground);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 520px) {
   .pr {
-    grid-template-columns: 24px 1fr auto;
-  }
-
-  .pr .reviewers {
-    grid-column: 2;
+    grid-template-columns: 24px minmax(120px, 1fr) 44px 24px 24px 40px 24px 0;
   }
 }

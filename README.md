@@ -25,16 +25,25 @@ opening links only to find that they are already merged.
     waiting for the author, or the required reviewer still missing; hover the icon for the
     state,
   - the author and age; hover the title for the pull request ID and branches,
-  - **approvals** on the latest push against the approvals the branch policy requires (`1/2`,
-    green when enough), and *waiting for author* and *rejected* votes; hover for the reviewers and
-    their votes, including approvals of an earlier push that no longer count,
-  - **validation builds** (click to open the build) and one icon for the other **branch
-    policies**: a lock with the number not met yet (failed or pending), or a green check when all
-    are met; hover for the policies not met and met. Optional policies are only shown when they are
-    not met, such as *Link work item*, marked *(optional)*; optional builds only when they
-    failed,
-  - unresolved **comment threads**, **merge conflicts** and **auto-complete** (with the merge
-    strategy),
+  - five status icons, always in the same columns, red when something required is missing, orange
+    for something less urgent, green when done and faded when there is nothing to show. Their
+    tooltips list the details from the most to the least urgent, so what remains once the problems
+    are solved is green:
+    1. **Approvals** on the latest push against the approvals the branch policy requires (`1/2`):
+       red without approvals or with a rejection, orange while waiting for the author or for more
+       approvals, a required reviewer or proof of presence. The tooltip lists who rejected, who is
+       waiting, what is missing, approvals of an earlier push that no longer count, and who
+       approved.
+    2. **Validation builds**: red when a required build failed or expired, spinning while required
+       builds run, orange when an optional build failed, green when all passed. Click it to open
+       the most urgent build.
+    3. **Branch policies** (a lock): red when a required policy is not met or still pending, orange
+       when an optional one failed (marked *(optional)*, such as *Link work item*), green when all
+       are met.
+    4. **Comments**: orange with the number of unresolved threads, green when all are resolved,
+       faded without comments.
+    5. **Auto-complete**: green when set (the tooltip names who set it and the merge strategy),
+       faded otherwise.
   - a blue bar on the left when it needs your review, and *Yours* for your own.
 
   The tabs at the top count the active pull requests, those that need your review and yours, and
