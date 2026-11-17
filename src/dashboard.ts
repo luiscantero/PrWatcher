@@ -12,6 +12,8 @@ const ALLOWED_COMMANDS = new Set([
   "prWatcher.addRepository",
   "prWatcher.removeRepository",
   "prWatcher.editAuthors",
+  "prWatcher.exportSettings",
+  "prWatcher.importSettings",
   "prWatcher.signIn",
   "prWatcher.showLog",
   "prWatcher.openSettings",

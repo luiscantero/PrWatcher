@@ -153,3 +153,95 @@ export function readRepositories(
   }
   return { repos, problems };
 }
+
+
+/** Settings shared with the team by export and import; personal ones (authentication, tenant) stay out. */
+export const SHARED_SETTINGS = [
+  "repositories",
+  "authors",
+  "closedRetentionHours",
+  "showAbandoned",
+  "showDrafts",
+  "refreshIntervalSeconds",
+  "notifications",
+  "statusBar",
+] as const;
+
+export type SharedSettings = Partial<Record<(typeof SHARED_SETTINGS)[number], unknown>>;
+
+const SETTING_TYPES: Record<(typeof SHARED_SETTINGS)[number], (v: unknown) => boolean> = {
+  repositories: (v) => Array.isArray(v) && v.every((e) => typeof e === "string" || (typeof e === "object" && e !== null && typeof (e as RepositorySetting).url === "string")),
+  authors: (v) => Array.isArray(v) && v.every((e) => typeof e === "string"),
+  closedRetentionHours: (v) => typeof v === "number",
+  showAbandoned: (v) => typeof v === "boolean",
+  showDrafts: (v) => typeof v === "boolean",
+  refreshIntervalSeconds: (v) => typeof v === "number",
+  notifications: (v) => v === "off" || v === "reviewRequested" || v === "all",
+  statusBar: (v) => typeof v === "boolean",
+};
+
+/** The exported file: the same `prWatcher.*` keys as settings.json, so it can also be pasted there. */
+export function exportSettings(settings: SharedSettings): string {
+  const out: Record<string, unknown> = {};
+  for (const key of SHARED_SETTINGS) {
+    if (settings[key] !== undefined) {
+      out[`prWatcher.${key}`] = settings[key];
+    }
+  }
+  return `${JSON.stringify(out, null, 2)}\n`;
+}
+
+/** Reads an exported file. Unknown keys and values of the wrong type are reported and skipped. */
+export function parseSettingsFile(text: string): { settings: SharedSettings; problems: string[] } {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error(`The file is not valid JSON: ${(e as Error).message}`);
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new Error("The file does not contain PR Watcher settings.");
+  }
+  const settings: SharedSettings = {};
+  const problems: string[] = [];
+  for (const [fullKey, value] of Object.entries(data)) {
+    const key = fullKey.replace(/^prWatcher\./, "") as (typeof SHARED_SETTINGS)[number];
+    if (!SHARED_SETTINGS.includes(key)) {
+      problems.push(`${fullKey} is not a shared PR Watcher setting`);
+    } else if (!SETTING_TYPES[key](value)) {
+      problems.push(`${fullKey} has an invalid value`);
+    } else {
+      settings[key] = value;
+    }
+  }
+  if (Object.keys(settings).length === 0) {
+    throw new Error(`The file does not contain PR Watcher settings${problems.length > 0 ? ` (${problems.join("; ")})` : ""}.`);
+  }
+  return { settings, problems };
+}
+
+/** Adds imported repositories and authors to the current ones; other imported settings win. */
+export function mergeSettings(current: SharedSettings, imported: SharedSettings): SharedSettings {
+  const merged: SharedSettings = { ...current, ...imported };
+  const key = (e: string | RepositorySetting) => {
+    const ref = parseRepoUrl(typeof e === "string" ? e : e.url);
+    return ref ? repoKey(ref) : JSON.stringify(e);
+  };
+  if (imported.repositories !== undefined) {
+    const entries = [...((current.repositories as (string | RepositorySetting)[] | undefined) ?? [])];
+    const known = new Set(entries.map(key));
+    for (const entry of imported.repositories as (string | RepositorySetting)[]) {
+      if (!known.has(key(entry))) {
+        known.add(key(entry));
+        entries.push(entry);
+      }
+    }
+    merged.repositories = entries;
+  }
+  if (imported.authors !== undefined) {
+    const authors = (current.authors as string[] | undefined) ?? [];
+    const lower = new Set(authors.map((a) => a.toLowerCase()));
+    merged.authors = [...authors, ...(imported.authors as string[]).filter((a) => !lower.has(a.toLowerCase()))];
+  }
+  return merged;
+}

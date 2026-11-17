@@ -68,6 +68,16 @@
         "category": "PR Watcher"
       },
       {
+        "command": "prWatcher.exportSettings",
+        "title": "Export Settings…",
+        "category": "PR Watcher"
+      },
+      {
+        "command": "prWatcher.importSettings",
+        "title": "Import Settings…",
+        "category": "PR Watcher"
+      },
+      {
         "command": "prWatcher.signIn",
         "title": "Sign In to Azure DevOps",
         "category": "PR Watcher"

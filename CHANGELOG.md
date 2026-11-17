@@ -6,6 +6,7 @@
 - No more state labels below the titles (such as *Failed …* or *Needs re-approval after new push*); the state icon's and the status icons' tooltips have the details.
 - Proof of presence is listed with the branch policies (lock), not the approvals; the lock is always closed; the comments tooltip reads *Resolved comments: 3/5*.
 - *Edit Watched Authors…* moved to the dashboard's toolbar and sets the authors for all repositories at once; *Add Repository…* only asks for authors when none are set yet.
+- *Export Settings…* and *Import Settings…* share the watched repositories, authors and other settings with your team as a JSON file; importing can add to or replace your own.
 
 ## 0.1.1
 

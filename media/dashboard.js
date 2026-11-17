@@ -319,6 +319,8 @@
       toolButton(state?.loading ? "sync~spin" : "refresh", "Refresh", () => run("prWatcher.refresh")),
       toolButton("add", "Add repository…", () => run("prWatcher.addRepository")),
       toolButton("person", "Edit watched authors…", () => run("prWatcher.editAuthors")),
+      toolButton("cloud-download", "Import settings…", () => run("prWatcher.importSettings")),
+      toolButton("cloud-upload", "Export settings to share with your team…", () => run("prWatcher.exportSettings")),
       toolButton("gear", "Settings", () => run("prWatcher.openSettings")),
     );
     if (selection) {

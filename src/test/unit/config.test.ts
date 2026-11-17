@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { parseAuthor, parseRepoUrl, readRepositories } from "../../config";
+import { exportSettings, mergeSettings, parseAuthor, parseRepoUrl, parseSettingsFile, readRepositories } from "../../config";
 
 suite("config", () => {
   test("parses web, pull request, clone and SSH URLs", () => {
@@ -75,5 +75,33 @@ suite("config", () => {
         [[{ kind: "everyone" }], "everyone"],
       ],
     );
+  });
+  test("exported settings import again, and unknown or invalid entries are skipped", () => {
+    const text = exportSettings({ repositories: ["https://dev.azure.com/o/p/_git/a"], authors: ["Team"], notifications: "off", showDrafts: undefined });
+    assert.deepStrictEqual(JSON.parse(text), {
+      "prWatcher.repositories": ["https://dev.azure.com/o/p/_git/a"],
+      "prWatcher.authors": ["Team"],
+      "prWatcher.notifications": "off",
+    });
+    assert.deepStrictEqual(parseSettingsFile(text).settings, { repositories: ["https://dev.azure.com/o/p/_git/a"], authors: ["Team"], notifications: "off" });
+    const { settings, problems } = parseSettingsFile(
+      JSON.stringify({ "prWatcher.authors": ["Team"], "prWatcher.authentication": "pat", "prWatcher.notifications": "loud" }),
+    );
+    assert.deepStrictEqual(settings, { authors: ["Team"] });
+    assert.deepStrictEqual(problems, ["prWatcher.authentication is not a shared PR Watcher setting", "prWatcher.notifications has an invalid value"]);
+    assert.throws(() => parseSettingsFile("not json"), /not valid JSON/);
+    assert.throws(() => parseSettingsFile('{"editor.fontSize": 12}'), /does not contain PR Watcher settings/);
+  });
+
+  test("merging adds repositories and authors that are not there yet", () => {
+    const merged = mergeSettings(
+      { repositories: ["https://dev.azure.com/o/p/_git/a", { url: "https://dev.azure.com/o/p/_git/b", authors: ["X"] }], authors: ["Team"], notifications: "all" },
+      { repositories: ["https://dev.azure.com/O/P/_git/A/pullrequests", "https://dev.azure.com/o/p/_git/c"], authors: ["team", "Agency"], notifications: "off" },
+    );
+    assert.deepStrictEqual(merged, {
+      repositories: ["https://dev.azure.com/o/p/_git/a", { url: "https://dev.azure.com/o/p/_git/b", authors: ["X"] }, "https://dev.azure.com/o/p/_git/c"],
+      authors: ["Team", "Agency"],
+      notifications: "off",
+    });
   });
 });

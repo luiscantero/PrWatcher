@@ -63,6 +63,13 @@ opening links only to find that they are already merged.
   their projects. A repository can still have its own `authors` in `prWatcher.repositories`;
   editing the authors in the dashboard replaces them with the shared list.
 
+- **Share the configuration with your team**: *Export Settings…* (the upload button in the
+  dashboard's toolbar) saves the watched repositories, the authors and the other settings you
+  changed to a JSON file (`pr-watcher-settings.json`, with the same `prWatcher.*` keys as
+  settings.json). Your teammates load it with *Import Settings…* (the download button) and choose
+  *Add*, to keep their repositories and authors and add the imported ones, or *Replace*. Personal
+  settings, such as how you sign in, are not exported.
+
   ![Choosing whose pull requests to show](images/authors.png)
 
 - **Notifications** for new pull requests of the watched authors (see `prWatcher.notifications`),
@@ -142,6 +149,8 @@ For example:
 | `PR Watcher: Refresh` | Check for changes now. |
 | `PR Watcher: Add Repository…` | Watch a repository, given its URL, and choose whose pull requests to show. |
 | `PR Watcher: Edit Watched Authors…` | Change whose pull requests to show in all repositories. |
+| `PR Watcher: Export Settings…` | Save the repositories, authors and other shared settings to a file for your team. |
+| `PR Watcher: Import Settings…` | Load an exported file, adding to or replacing your repositories and authors. |
 | `PR Watcher: Remove Repository…` | Stop watching a repository. |
 | `PR Watcher: Sign In to Azure DevOps` | Sign in with the configured authentication. |
 | `PR Watcher: Set Personal Access Token…` | Store a personal access token and use it. |

@@ -1,7 +1,21 @@
+import * as os from "os";
 import * as vscode from "vscode";
 import { AdoClient, AuthError } from "./ado";
 import { Auth } from "./auth";
-import { RepositorySetting, WatchedRepo, parseRepoUrl, readRepositories, repoKey, repoWebUrl } from "./config";
+import {
+  RepositorySetting,
+  SHARED_SETTINGS,
+  SharedSettings,
+  WatchedRepo,
+  authorsLabel,
+  exportSettings,
+  mergeSettings,
+  parseRepoUrl,
+  parseSettingsFile,
+  readRepositories,
+  repoKey,
+  repoWebUrl,
+} from "./config";
 import { Dashboard } from "./dashboard";
 import { PrView } from "./status";
 import { DashboardState, Watcher } from "./watcher";
@@ -416,6 +430,72 @@ export async function activate(context: vscode.ExtensionContext) {
       }),
     ),
     vscode.commands.registerCommand("prWatcher.setPersonalAccessToken", guard(() => auth.promptForPat())),
+    vscode.commands.registerCommand(
+      "prWatcher.exportSettings",
+      guard(async () => {
+        const settings: SharedSettings = {};
+        for (const key of SHARED_SETTINGS) {
+          const inspect = config().inspect(key);
+          // Only settings that were changed, so defaults are not pinned for the team.
+          if (inspect?.globalValue !== undefined || inspect?.workspaceValue !== undefined || inspect?.workspaceFolderValue !== undefined) {
+            settings[key] = config().get(key);
+          }
+        }
+        const folder = vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir());
+        const uri = await vscode.window.showSaveDialog({
+          title: "PR Watcher: Export Settings",
+          defaultUri: vscode.Uri.joinPath(folder, "pr-watcher-settings.json"),
+          filters: { JSON: ["json"] },
+        });
+        if (!uri) {
+          return;
+        }
+        await vscode.workspace.fs.writeFile(uri, Buffer.from(exportSettings(settings), "utf8"));
+        const repos = watchOptions().repos.length;
+        void vscode.window.showInformationMessage(
+          `PR Watcher: exported ${repos} repositor${repos === 1 ? "y" : "ies"} and the watched authors to ${uri.fsPath}. Share it with your team to import.`,
+        );
+      }),
+    ),
+    vscode.commands.registerCommand(
+      "prWatcher.importSettings",
+      guard(async () => {
+        const [uri] =
+          (await vscode.window.showOpenDialog({ title: "PR Watcher: Import Settings", canSelectMany: false, filters: { JSON: ["json"] } })) ?? [];
+        if (!uri) {
+          return;
+        }
+        const { settings, problems } = parseSettingsFile(Buffer.from(await vscode.workspace.fs.readFile(uri)).toString("utf8"));
+        const count = Array.isArray(settings.repositories) ? settings.repositories.length : 0;
+        const detail = [
+          count > 0 ? `${count} repositor${count === 1 ? "y" : "ies"}` : "",
+          Array.isArray(settings.authors) ? `authors: ${authorsLabel(settings.authors as string[])}` : "",
+          ...problems.map((p) => `Skipped: ${p}`),
+        ]
+          .filter(Boolean)
+          .join("\n");
+        const choice = await vscode.window.showInformationMessage(
+          "Import PR Watcher settings?",
+          { modal: true, detail: `${detail}\n\nAdd keeps your repositories and authors and adds the imported ones; Replace uses only the imported ones.` },
+          "Add",
+          "Replace",
+        );
+        if (!choice) {
+          return;
+        }
+        const current: SharedSettings = {};
+        for (const key of SHARED_SETTINGS) {
+          current[key] = config().get(key);
+        }
+        const result = choice === "Add" ? mergeSettings(current, settings) : { ...current, ...settings };
+        for (const key of SHARED_SETTINGS) {
+          if (settings[key] !== undefined) {
+            await updateSetting(key, () => result[key]);
+          }
+        }
+        dashboard.show();
+      }),
+    ),
     vscode.commands.registerCommand("prWatcher.showLog", () => log.show()),
     vscode.commands.registerCommand("prWatcher.openSettings", () =>
       vscode.commands.executeCommand("workbench.action.openSettings", `@ext:${context.extension.id}`),
