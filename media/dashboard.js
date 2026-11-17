@@ -150,7 +150,7 @@
     const approvals = statusIcon(`approvals ${LEVEL_CLASS[a.level]}`, summaryTitle(a, "No reviewers"), count);
 
     const v = pr.validationSummary;
-    const validationGlyph = { bad: "error", warn: "error", running: "sync~spin", good: "pass", none: "pass" }[v.level];
+    const validationGlyph = v.level === "bad" || v.level === "warn" ? "error" : v.running ? "sync~spin" : "pass";
     const validation = statusIcon(`${LEVEL_CLASS[v.level]}${v.url ? " link" : ""}`, summaryTitle(v, "No validation builds"), icon(validationGlyph));
     if (v.url) {
       validation.addEventListener("click", (e) => {
@@ -319,7 +319,7 @@
       toolButton("person", "Edit watched authors…", () => run("prWatcher.editAuthors")),
       h("span", { className: "updated", title: state?.updated ? fullDate(state.updated) : undefined }, updated),
       toolButton(state?.loading ? "sync~spin" : "refresh", "Refresh", () => run("prWatcher.refresh")),
-      toolButton("gear", "Settings (also import and export)", () => run("prWatcher.openSettings")),
+      toolButton("gear", "Settings | Import/Export", () => run("prWatcher.openSettings")),
     );
     if (selection) {
       search.focus();

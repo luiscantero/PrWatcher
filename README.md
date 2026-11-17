@@ -32,9 +32,10 @@ opening links only to find that they are already merged.
        approvals or a required reviewer. The tooltip lists who rejected, who is
        waiting, what is missing, approvals of an earlier push that no longer count, and who
        approved.
-    2. **Validation builds**: red when a required build failed or expired, spinning while required
-       builds run, orange when an optional build failed, green when all passed. Click it to open
-       the most urgent build.
+    2. **Validation builds**: red when a required build failed or expired, spinning while builds
+       run (blue for required ones; green when only optional ones are left, which auto-complete
+       still waits for), orange when an optional build failed, green when all passed. Click it to
+       open the most urgent build.
     3. **Branch policies** (a lock): red when a required policy is not met or still pending, orange
        when an optional one failed (marked *(optional)*, such as *Link work item*), green when all
        are met. Proof of presence is listed here too.

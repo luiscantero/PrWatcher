@@ -42,6 +42,8 @@ export interface CheckView {
 export interface Summary {
   /** bad: red; warn: orange; running: in progress; good: green; none: nothing to show (faded). */
   level: "bad" | "warn" | "running" | "good" | "none";
+  /** Something is still in progress (for validations, also optional builds), shown as a spinning icon. */
+  running?: boolean;
   sections: { heading: string; items: string[] }[];
   /** For validations, the build to open on click: the most urgent one. */
   url?: string;
@@ -292,6 +294,8 @@ export function validationSummary(checks: readonly CheckView[]): Summary {
   }
   return {
     level,
+    // Auto-complete also waits for optional builds, so they spin too (green once the required ones passed).
+    running: running.length > 0,
     sections: sections([
       ["Failed", failed.map(label)],
       ["Running", running.map(label)],

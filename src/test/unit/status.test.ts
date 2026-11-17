@@ -230,6 +230,10 @@ suite("status", () => {
     assert.strictEqual(summary(build("Lint", "rejected", false), build("PR", "running")).level, "running");
     assert.strictEqual(summary(build("Lint", "rejected", false), build("PR", "approved")).level, "warn");
     assert.strictEqual(summary(build("PR", "approved")).level, "good");
+    assert.strictEqual(summary(build("PR", "approved")).running, false);
+    // An optional build still running keeps auto-complete waiting: green, but spinning.
+    const optionalRunning = summary(build("PR", "approved"), build("Lint", "running", false));
+    assert.deepStrictEqual([optionalRunning.level, optionalRunning.running], ["good", true]);
     assert.strictEqual(summary().level, "none");
   });
 

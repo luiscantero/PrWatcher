@@ -7,6 +7,7 @@
 - Proof of presence is listed with the branch policies (lock), not the approvals; the lock is always closed; the comments tooltip reads *Resolved comments: 3/5*.
 - *Edit Watched Authors…* moved to the dashboard's toolbar and sets the authors for all repositories at once; *Add Repository…* only asks for authors when none are set yet.
 - *Export Settings…* and *Import Settings…* share the watched repositories, authors and other settings with your team as a JSON file; importing can add to or replace your own.
+- The validation icon also spins, in green, while optional builds run, since auto-complete waits for them.
 
 ## 0.1.1
 
