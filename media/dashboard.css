@@ -300,10 +300,6 @@ button.primary:hover {
   font-size: 12px;
 }
 
-.phase-label {
-  font-weight: 600;
-}
-
 .badge {
   flex: none;
   padding: 0 6px;

@@ -117,8 +117,6 @@
     abandoned: ["git-pull-request-closed", "muted"],
   };
 
-  /** Phases whose icon says it all, so their label is only in the icon's tooltip. */
-  const QUIET_PHASES = new Set(["validationRunning", "ready", "merged", "abandoned"]);
 
   const LEVEL_CLASS = { bad: "bad", warn: "warn", running: "info", good: "good", none: "faded" };
 
@@ -207,8 +205,6 @@
     const when = closed
       ? `${pr.status === "completed" ? "merged" : "abandoned"} ${ago(pr.closed)} · hidden in ${remaining(pr.expires)}`
       : `opened ${ago(pr.created)}`;
-    // The icon already says these; the label only adds what it cannot (who, which build, which policy).
-    const showLabel = !QUIET_PHASES.has(pr.phase) && pr.phaseLabel !== "Needs review";
     const title = h("a", { className: "title", href: pr.url, title: `${pr.title}\n!${pr.id} · ${pr.source} → ${pr.target}` }, pr.title);
     title.addEventListener("click", (e) => {
       e.preventDefault();
@@ -236,7 +232,6 @@
         h(
           "div",
           { className: "line2" },
-          showLabel ? h("span", { className: `phase-label ${cls}` }, `${pr.phaseLabel} · `) : null,
           h("span", { title: closed ? fullDate(pr.closed) : fullDate(pr.created) }, `${meta.join(" · ")} · ${when}`),
           h("span", { className: "branch", title: `${pr.source} → ${pr.target}` }, ` · → ${pr.target}`),
         ),

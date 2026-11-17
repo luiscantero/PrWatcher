@@ -20,10 +20,8 @@ opening links only to find that they are already merged.
   - its **state** as an icon, from the most to the least urgent: *Conflicts*, *Failed* (with the
     build), *Rejected*, *Waiting for author*, *Needs re-approval after new push*, *Needs review*,
     *Validation running*, *Blocked* (for example by unresolved comments), *Ready to complete*,
-    *Approved, auto-complete set*, *Merged* and, if `prWatcher.showAbandoned` is on, *Abandoned*.
-    Below the title, a label adds what the icon cannot say, such as the failed build, who is
-    waiting for the author, or the required reviewer still missing; hover the icon for the
-    state,
+    *Approved, auto-complete set*, *Merged* and, if `prWatcher.showAbandoned` is on, *Abandoned*;
+    hover it for the state,
   - the author and age; hover the title for the pull request ID and branches,
   - five status icons, always in the same columns, red when something required is missing, orange
     for something less urgent, green when done and faded when there is nothing to show. Their
