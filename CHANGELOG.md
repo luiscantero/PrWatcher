@@ -1,15 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
-- Five status icons in fixed columns: approvals, validation builds, branch policies, comments and auto-complete. Each is red, orange, green or faded, and its tooltip lists the details from the most to the least urgent.
-- No more state labels below the titles (such as *Failed …* or *Needs re-approval after new push*); the state icon's and the status icons' tooltips have the details.
-- Proof of presence is listed with the branch policies (lock), not the approvals; the lock is always closed; the comments tooltip reads *Resolved comments: 3/5*.
-- *Edit Watched Authors…* moved to the dashboard's toolbar and sets the authors for all repositories at once; *Add Repository…* only asks for authors when none are set yet.
-- *Export Settings…* and *Import Settings…* share the watched repositories, authors and other settings with your team as a JSON file; importing can add to or replace your own.
-- The validation icon also spins, in green, while optional builds run, since auto-complete waits for them.
-- Optional policies and builds that were made optional for a pull request (*Make optional*, so auto-complete ignores them) are listed under *Made optional* and no longer turn the icons orange; the others are marked *(optional, blocks auto-complete)*.
-- The lock no longer lists *Comment requirements*; the comments icon shows the unresolved threads.
+- Five status icons in fixed columns replace the mixed icons next to each pull request: approvals (`1/2`), validation builds, branch policies (lock), comments and auto-complete. Each is red when something required is missing, orange for something less urgent, green when done and faded when there is nothing to show; its tooltip lists the details from the most to the least urgent, so what remains once the problems are solved is green.
+- Optional policies and builds are marked *(optional, blocks auto-complete)*, since auto-complete waits for them; those made optional on the pull request (*Make optional*) block nothing and are listed under *Made optional*. The validation icon spins in green while only optional builds run.
+- Proof of presence is listed with the branch policies; comment requirements are left out of them, since the comments icon shows the unresolved threads (*Resolved comments: 3/5*).
+- No state labels below the titles anymore; hover the icons for the details.
+- *Edit Watched Authors…* is in the dashboard's toolbar and sets the authors for all repositories at once; *Add Repository…* only asks for authors when none are set yet.
+- *Export Settings…* and *Import Settings…* (links at the top of PR Watcher's settings) share the watched repositories, authors and other settings with your team as a JSON file; importing can add to or replace your own.
+- Toolbar order: filter, list or group, add repository, watched authors, last update, refresh, settings.
 
 ## 0.1.1
 
