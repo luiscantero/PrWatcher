@@ -63,17 +63,20 @@ function addPr(repo, author, title, hours, options = {}) {
       isDraft: options.draft ?? false,
       reviewers: options.reviewers ?? [teamVote(0)],
       autoCompleteSetBy: options.autoComplete ? author : undefined,
-      completionOptions: options.autoComplete ? { mergeStrategy: "squash" } : undefined,
+      completionOptions: options.autoComplete ? { mergeStrategy: "squash", autoCompleteIgnoreConfigIds: options.madeOptional ?? [] } : undefined,
       repository: { ...repos[repo], webUrl: webUrl(repo), project: PROJECT },
     },
     evaluations: options.evaluations ?? [],
-    threads: Array.from({ length: options.comments ?? 0 }, (_, i) => ({ id: i + 1, status: "active", comments: [{ commentType: "text" }] })),
+    threads: [
+      ...Array.from({ length: options.comments ?? 0 }, (_, i) => ({ id: i + 1, status: "active", comments: [{ commentType: "text" }] })),
+      ...Array.from({ length: options.resolved ?? 0 }, (_, i) => ({ id: 100 + i, status: "fixed", comments: [{ commentType: "text" }] })),
+    ],
   });
 }
 
 let evaluationId = 0;
-function evaluation(type, status, { blocking = true, settings = {}, context = null } = {}) {
-  return { evaluationId: String(++evaluationId), status, context, configuration: { id: evaluationId, isBlocking: blocking, isEnabled: true, type: { id: type, displayName: type }, settings } };
+function evaluation(type, status, { blocking = true, settings = {}, context = null, id } = {}) {
+  return { evaluationId: String(++evaluationId), status, context, configuration: { id: id ?? evaluationId, isBlocking: blocking, isEnabled: true, type: { id: type, displayName: type }, settings } };
 }
 const reviewers = (status, approvers = []) =>
   evaluation("Minimum number of reviewers", status, {
@@ -100,8 +103,14 @@ addPr("payments-api", mei, "Migrate settlement jobs to the new scheduler", 6, {
 });
 addPr("payments-api", omar, "Bump Azure SDK packages", 3, {
   reviewers: [teamVote(10), vote(priya, 10), vote(jonas, 10)],
-  evaluations: policies(reviewers("approved", [priya, jonas]), build("running", "payments-api-PR", 1203)),
+  evaluations: policies(
+    reviewers("approved", [priya, jonas]),
+    build("running", "payments-api-PR", 1203),
+    evaluation("Work item linking", "rejected", { blocking: false, id: 9001 }),
+  ),
   autoComplete: true,
+  madeOptional: [9001],
+  resolved: 2,
 });
 addPr("payments-api", me, "Validate currency codes against ISO 4217", 26, {
   reviewers: [teamVote(0), vote(jonas, 5)],
@@ -121,6 +130,8 @@ addPr("payments-api", jonas, "Log correlation IDs in payment events", 30, {
 addPr("web-portal", sofia, "Dark mode for the account settings page", 8, {
   reviewers: [vote(me, 10), vote(mei, 10)],
   evaluations: policies(reviewers("approved", [me, mei]), build("approved", "web-portal-PR", 1206)),
+  resolved: 3,
+  autoComplete: true,
 });
 addPr("web-portal", mei, "Show pending refunds on the order history", 12, {
   reviewers: [vote(sofia, 10), vote(jonas, 10)],
