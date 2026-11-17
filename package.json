@@ -127,7 +127,7 @@
               }
             ]
           },
-          "markdownDescription": "Azure DevOps repositories to watch. Use *PR Watcher: Add Repository…* or add entries such as `{ \"url\": \"https://dev.azure.com/contoso/Project/_git/repo\", \"authors\": [\"My Team\"] }`. `authors` overrides `#prWatcher.authors#` for that repository."
+          "markdownDescription": "Share these settings with your team: [Export settings…](command:prWatcher.exportSettings) · [Import settings…](command:prWatcher.importSettings)\n\nAzure DevOps repositories to watch. Use *PR Watcher: Add Repository…* or add entries such as `{ \"url\": \"https://dev.azure.com/contoso/Project/_git/repo\", \"authors\": [\"My Team\"] }`. `authors` overrides `#prWatcher.authors#` for that repository."
         },
         "prWatcher.authors": {
           "type": "array",

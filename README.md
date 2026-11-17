@@ -63,10 +63,11 @@ opening links only to find that they are already merged.
   their projects. A repository can still have its own `authors` in `prWatcher.repositories`;
   editing the authors in the dashboard replaces them with the shared list.
 
-- **Share the configuration with your team**: *Export Settings…* (the upload button in the
-  dashboard's toolbar) saves the watched repositories, the authors and the other settings you
-  changed to a JSON file (`pr-watcher-settings.json`, with the same `prWatcher.*` keys as
-  settings.json). Your teammates load it with *Import Settings…* (the download button) and choose
+- **Share the configuration with your team**: *Export Settings…* (a link at the top of PR
+  Watcher's settings, opened with the gear button in the dashboard, or the Command Palette) saves
+  the watched repositories, the authors and the other settings you changed to a JSON file
+  (`pr-watcher-settings.json`, with the same `prWatcher.*` keys as settings.json). Your teammates
+  load it with *Import Settings…* (the link next to it) and choose
   *Add*, to keep their repositories and authors and add the imported ones, or *Replace*. Personal
   settings, such as how you sign in, are not exported.
 
