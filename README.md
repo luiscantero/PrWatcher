@@ -37,8 +37,12 @@ opening links only to find that they are already merged.
        still waits for), orange when an optional build failed, green when all passed. Click it to
        open the most urgent build.
     3. **Branch policies** (a lock): red when a required policy is not met or still pending, orange
-       when an optional one failed (marked *(optional)*, such as *Link work item*), green when all
-       are met. Proof of presence is listed here too.
+       when an optional one failed (marked *(optional, blocks auto-complete)*, such as *Link work
+       item*), green when all are met. Proof of presence is listed here too.
+
+    Required policies and builds block completing the pull request. Optional ones only block
+    auto-complete, until someone clicks *Make optional* on the pull request: then they block
+    nothing, are listed under *Made optional* and no longer color the icons.
     4. **Comments**: orange with the number of unresolved threads, green when all are resolved,
        faded without comments; the tooltip shows how many are resolved (`Resolved comments: 3/5`).
     5. **Auto-complete**: green when set (the tooltip names who set it and the merge strategy),

@@ -32,6 +32,8 @@ export interface CheckView {
   name: string;
   status: CheckStatus;
   blocking: boolean;
+  /** An optional policy that was made optional for this pull request, so auto-complete does not wait for it either. */
+  ignored: boolean;
   url?: string;
 }
 
@@ -163,7 +165,11 @@ function checkName(e: PolicyEvaluation, kind: CheckKind): string {
 const SEVERITY: Record<CheckStatus, number> = { approved: 0, queued: 1, running: 2, expired: 3, broken: 4, rejected: 5 };
 
 /** Enabled policies that apply to the pull request, one per kind and name, with the worst status. */
-export function toChecks(evaluations: readonly PolicyEvaluation[], buildUrl: (buildId: number) => string): CheckView[] {
+export function toChecks(
+  evaluations: readonly PolicyEvaluation[],
+  buildUrl: (buildId: number) => string,
+  ignoredByAutoComplete: ReadonlySet<number> = new Set(),
+): CheckView[] {
   const checks = new Map<string, CheckView>();
   for (const e of evaluations) {
     if (!e.configuration.isEnabled || e.status === "notApplicable") {
@@ -180,7 +186,15 @@ export function toChecks(evaluations: readonly PolicyEvaluation[], buildUrl: (bu
       status = "expired";
     }
     const buildId = kind === "build" && typeof e.context?.buildId === "number" ? e.context.buildId : undefined;
-    const check: CheckView = { kind, name, status, blocking: e.configuration.isBlocking, url: buildId !== undefined ? buildUrl(buildId) : undefined };
+    const blocking = e.configuration.isBlocking;
+    const check: CheckView = {
+      kind,
+      name,
+      status,
+      blocking,
+      ignored: !blocking && ignoredByAutoComplete.has(e.configuration.id),
+      url: buildId !== undefined ? buildUrl(buildId) : undefined,
+    };
     const key = `${kind}|${name}`;
     const known = checks.get(key);
     // Several policies of one kind can apply (for example per path); a blocking one wins, then the worst status.
@@ -270,18 +284,23 @@ function lastIterationApprovers(evaluations: readonly PolicyEvaluation[]): { req
   return { required, ids };
 }
 
-const optional = (c: CheckView) => (c.blocking ? c.name : `${c.name} (optional)`);
+// Required policies block completing; optional ones only block auto-complete, unless someone made them optional
+// for the pull request (then they block nothing).
+const optional = (c: CheckView) => (c.blocking ? c.name : `${c.name} (optional, blocks auto-complete)`);
 const isFailed = (c: CheckView) => c.status === "rejected" || c.status === "broken" || c.status === "expired";
 const isRunning = (c: CheckView) => c.status === "running" || c.status === "queued";
 const sections = (list: [string, string[]][]) => list.filter(([, items]) => items.length > 0).map(([heading, items]) => ({ heading, items }));
 
-/** Validation builds: required failures, then running builds, optional failures and passed builds. */
+/** Validation builds: required failures, then running builds, optional failures, builds made optional and passed builds. */
 export function validationSummary(checks: readonly CheckView[]): Summary {
   const builds = checks.filter((c) => c.kind === "build");
-  const failed = builds.filter(isFailed).sort((a, b) => Number(b.blocking) - Number(a.blocking));
-  const running = builds.filter(isRunning).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const counted = builds.filter((c) => !c.ignored);
+  const failed = counted.filter(isFailed).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const running = counted.filter(isRunning).sort((a, b) => Number(b.blocking) - Number(a.blocking));
+  const madeOptional = builds.filter((c) => c.ignored && c.status !== "approved");
   const passed = builds.filter((c) => c.status === "approved");
-  const label = (c: CheckView) => `${optional(c)}${c.status === "expired" ? " (expired)" : ""}${c.status === "queued" ? " (queued)" : ""}`;
+  const suffix = (c: CheckView) => `${c.status === "expired" ? " (expired)" : ""}${c.status === "queued" ? " (queued)" : ""}`;
+  const label = (c: CheckView) => `${optional(c)}${suffix(c)}`;
   let level: Summary["level"] = "none";
   if (failed.some((c) => c.blocking)) {
     level = "bad";
@@ -299,34 +318,37 @@ export function validationSummary(checks: readonly CheckView[]): Summary {
     sections: sections([
       ["Failed", failed.map(label)],
       ["Running", running.map(label)],
-      ["Passed", passed.map(label)],
+      ["Made optional", madeOptional.map((c) => `${c.name}${isRunning(c) ? " (running)" : " (failed)"}`)],
+      ["Passed", passed.map((c) => `${c.name}${c.blocking ? "" : " (optional)"}`)],
     ]),
-    url: (failed[0] ?? running[0] ?? passed[0])?.url,
+    url: (failed[0] ?? running[0] ?? madeOptional[0] ?? passed[0])?.url,
   };
 }
 
 // Proof of presence is listed with the policies, although it also keeps the pull request in review.
 const REVIEW_KINDS: CheckKind[] = ["reviewers", "requiredReviewers"];
 
-/** Other branch policies: required ones not met (or pending), then optional ones not met, then met. */
+/** Other branch policies: required ones not met (or pending), optional ones that block auto-complete, those made optional, then met. */
 export function policySummary(checks: readonly CheckView[]): Summary {
   const policies = checks.filter((c) => c.kind !== "build" && !REVIEW_KINDS.includes(c.kind));
   const requiredUnmet = policies.filter((c) => c.blocking && c.status !== "approved");
   // Optional policies only matter once they failed; pending ones would just be noise.
-  const optionalUnmet = policies.filter((c) => !c.blocking && isFailed(c));
+  const optionalUnmet = policies.filter((c) => !c.blocking && !c.ignored && isFailed(c));
+  const madeOptional = policies.filter((c) => c.ignored && isFailed(c));
   const met = policies.filter((c) => c.blocking && c.status === "approved");
   let level: Summary["level"] = "none";
   if (requiredUnmet.length > 0) {
     level = "bad";
   } else if (optionalUnmet.length > 0) {
     level = "warn";
-  } else if (met.length > 0) {
+  } else if (met.length > 0 || madeOptional.length > 0) {
     level = "good";
   }
   return {
     level,
     sections: sections([
       ["Not met", [...requiredUnmet.map((c) => `${c.name}${isRunning(c) ? " (pending)" : ""}`), ...optionalUnmet.map(optional)]],
+      ["Made optional", madeOptional.map((c) => c.name)],
       ["Met", met.map((c) => c.name)],
     ]),
   };
@@ -354,7 +376,7 @@ export function toPrView(input: PrInput): PrView {
   const organization = input.repoKey.split("/")[0];
   const buildUrl = (buildId: number) =>
     `https://dev.azure.com/${encodeURIComponent(organization)}/${encodeURIComponent(pr.repository.project.name)}/_build/results?buildId=${buildId}`;
-  const checks = toChecks(evaluations, buildUrl);
+  const checks = toChecks(evaluations, buildUrl, new Set(pr.completionOptions?.autoCompleteIgnoreConfigIds ?? []));
   const lastIteration = lastIterationApprovers(evaluations);
   const reviewerChecks = checks.filter((c) => c.kind === "reviewers" && c.blocking);
   const reviewersSatisfied = reviewerChecks.length > 0 && reviewerChecks.every((c) => c.status === "approved");

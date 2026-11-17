@@ -30,7 +30,8 @@ export interface PullRequest {
   isDraft?: boolean;
   reviewers?: Reviewer[];
   autoCompleteSetBy?: IdentityRef;
-  completionOptions?: { mergeStrategy?: string; deleteSourceBranch?: boolean };
+  /** `autoCompleteIgnoreConfigIds`: optional policies someone chose to "make optional", so auto-complete does not wait for them. */
+  completionOptions?: { mergeStrategy?: string; deleteSourceBranch?: boolean; autoCompleteIgnoreConfigIds?: number[] };
   repository: { id: string; name: string; webUrl?: string; project: { id: string; name: string } };
 }
 

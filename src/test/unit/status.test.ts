@@ -25,12 +25,16 @@ function pr(extra: Partial<PullRequest> = {}): PullRequest {
   };
 }
 
-function evaluation(type: string, status: PolicyEvaluation["status"], extra: { blocking?: boolean; settings?: Record<string, unknown>; context?: Record<string, unknown> } = {}): PolicyEvaluation {
+function evaluation(
+  type: string,
+  status: PolicyEvaluation["status"],
+  extra: { blocking?: boolean; settings?: Record<string, unknown>; context?: Record<string, unknown>; id?: number } = {},
+): PolicyEvaluation {
   return {
     evaluationId: `${type}-${status}`,
     status,
     context: extra.context ?? null,
-    configuration: { id: 1, isBlocking: extra.blocking ?? true, isEnabled: true, type: { id: type, displayName: type }, settings: extra.settings ?? {} },
+    configuration: { id: extra.id ?? 1, isBlocking: extra.blocking ?? true, isEnabled: true, type: { id: type, displayName: type }, settings: extra.settings ?? {} },
   };
 }
 
@@ -222,7 +226,7 @@ suite("status", () => {
     const bad = summary(build("Lint", "rejected", false, 1), build("PR", "rejected", true, 2), build("E2E", "running", true, 3), build("Docs", "approved", true, 4));
     assert.strictEqual(bad.level, "bad");
     assert.deepStrictEqual(bad.sections, [
-      { heading: "Failed", items: ["PR", "Lint (optional)"] },
+      { heading: "Failed", items: ["PR", "Lint (optional, blocks auto-complete)"] },
       { heading: "Running", items: ["E2E"] },
       { heading: "Passed", items: ["Docs"] },
     ]);
@@ -249,10 +253,36 @@ suite("status", () => {
     );
     assert.strictEqual(bad.level, "bad");
     assert.deepStrictEqual(bad.sections, [
-      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Proof Of Presence", "Link work item (optional)"] },
+      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Proof Of Presence", "Link work item (optional, blocks auto-complete)"] },
       { heading: "Met", items: ["License"] },
     ]);
     assert.strictEqual(summary(evaluation("Work item linking", "rejected", { blocking: false }), evaluation("Comment requirements", "approved")).level, "warn");
     assert.strictEqual(summary(evaluation("Work item linking", "queued", { blocking: false })).level, "none");
+  });
+
+  test("optional policies and builds that were made optional for the pull request block nothing", () => {
+    const v = view({
+      pr: { completionOptions: { autoCompleteIgnoreConfigIds: [7, 8, 9] } },
+      evaluations: [
+        evaluation("Work item linking", "rejected", { blocking: false, id: 7 }),
+        evaluation("Comment requirements", "approved", { id: 2 }),
+        evaluation("Build", "rejected", { blocking: false, id: 8, settings: { displayName: "Cleanup" } }),
+        evaluation("Build", "running", { blocking: false, id: 9, settings: { displayName: "Upgrade" } }),
+        evaluation("Build", "approved", { id: 3, settings: { displayName: "PR" } }),
+      ],
+    });
+    assert.deepStrictEqual(v.policySummary, {
+      level: "good",
+      sections: [
+        { heading: "Made optional", items: ["Link work item"] },
+        { heading: "Met", items: ["Comment requirements"] },
+      ],
+    });
+    assert.strictEqual(v.validationSummary.level, "good");
+    assert.strictEqual(v.validationSummary.running, false);
+    assert.deepStrictEqual(v.validationSummary.sections, [
+      { heading: "Made optional", items: ["Cleanup (failed)", "Upgrade (running)"] },
+      { heading: "Passed", items: ["PR"] },
+    ]);
   });
 });
