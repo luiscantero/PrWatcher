@@ -29,7 +29,7 @@ opening links only to find that they are already merged.
     are solved is green:
     1. **Approvals** on the latest push against the approvals the branch policy requires (`1/2`):
        red without approvals or with a rejection, orange while waiting for the author or for more
-       approvals, a required reviewer or proof of presence. The tooltip lists who rejected, who is
+       approvals or a required reviewer. The tooltip lists who rejected, who is
        waiting, what is missing, approvals of an earlier push that no longer count, and who
        approved.
     2. **Validation builds**: red when a required build failed or expired, spinning while required
@@ -37,9 +37,9 @@ opening links only to find that they are already merged.
        the most urgent build.
     3. **Branch policies** (a lock): red when a required policy is not met or still pending, orange
        when an optional one failed (marked *(optional)*, such as *Link work item*), green when all
-       are met.
+       are met. Proof of presence is listed here too.
     4. **Comments**: orange with the number of unresolved threads, green when all are resolved,
-       faded without comments.
+       faded without comments; the tooltip shows how many are resolved (`Resolved comments: 3/5`).
     5. **Auto-complete**: green when set (the tooltip names who set it and the merge strategy),
        faded otherwise.
   - a blue bar on the left when it needs your review, and *Yours* for your own.

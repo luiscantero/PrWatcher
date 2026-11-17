@@ -160,19 +160,17 @@
     }
 
     const p = pr.policySummary;
-    const policies = statusIcon(LEVEL_CLASS[p.level], summaryTitle(p, "No other branch policies"), icon(p.level === "good" || p.level === "none" ? "unlock" : "lock"));
+    const policies = statusIcon(LEVEL_CLASS[p.level], summaryTitle(p, "No other branch policies"), icon("lock"));
 
     const c = pr.comments;
     let comments;
     if (!c) {
       comments = statusIcon("faded", "Comments could not be loaded", icon("comment-discussion"));
-    } else if (c.unresolved > 0) {
-      const resolved = c.resolved > 0 ? `\n${c.resolved} resolved` : "";
-      comments = statusIcon("warn", `${c.unresolved} unresolved comment thread${c.unresolved === 1 ? "" : "s"}${resolved}`, icon("comment-discussion"), String(c.unresolved));
-    } else if (c.resolved > 0) {
-      comments = statusIcon("good", `All ${c.resolved} comment thread${c.resolved === 1 ? "" : "s"} resolved`, icon("comment-discussion"));
     } else {
-      comments = statusIcon("faded", "No comments", icon("comment-discussion"));
+      const total = c.unresolved + c.resolved;
+      const title = total > 0 ? `Resolved comments: ${c.resolved}/${total}` : "No comments";
+      const level = c.unresolved > 0 ? "warn" : total > 0 ? "good" : "faded";
+      comments = statusIcon(level, title, icon("comment-discussion"), c.unresolved > 0 ? String(c.unresolved) : null);
     }
 
     const ac = pr.autoComplete;

@@ -95,6 +95,9 @@ suite("status", () => {
     assert.strictEqual(v.phase, "needsReview");
     assert.strictEqual(v.phaseLabel, "Needs proof of presence");
     assert.strictEqual(v.needsMyReview, false);
+    // Proof of presence is listed with the policies; the approvals are complete.
+    assert.strictEqual(v.approvalSummary.level, "good");
+    assert.strictEqual(v.policySummary.level, "bad");
   });
 
   test("a failed blocking build wins over review; optional builds and pending merge strategies do not count", () => {
@@ -201,7 +204,7 @@ suite("status", () => {
     assert.deepStrictEqual(v.approvalSummary.sections, [
       { heading: "Waiting for author", items: ["bo"] },
       { heading: "Missing", items: ["1 more approval", "dee (required)"] },
-      { heading: "Approved an earlier push", items: ["cy"] },
+      { heading: "Approved earlier push", items: ["cy"] },
       { heading: "Approved", items: ["ana"] },
     ]);
     assert.strictEqual(view({ evaluations: [minReviewers("queued")] }).approvalSummary.level, "bad");
@@ -242,7 +245,7 @@ suite("status", () => {
     );
     assert.strictEqual(bad.level, "bad");
     assert.deepStrictEqual(bad.sections, [
-      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Link work item (optional)"] },
+      { heading: "Not met", items: ["Comment requirements", "Scan (pending)", "Proof Of Presence", "Link work item (optional)"] },
       { heading: "Met", items: ["License"] },
     ]);
     assert.strictEqual(summary(evaluation("Work item linking", "rejected", { blocking: false }), evaluation("Comment requirements", "approved")).level, "warn");

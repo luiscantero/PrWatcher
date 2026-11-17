@@ -301,7 +301,8 @@ export function validationSummary(checks: readonly CheckView[]): Summary {
   };
 }
 
-const REVIEW_KINDS: CheckKind[] = ["reviewers", "requiredReviewers", "proofOfPresence"];
+// Proof of presence is listed with the policies, although it also keeps the pull request in review.
+const REVIEW_KINDS: CheckKind[] = ["reviewers", "requiredReviewers"];
 
 /** Other branch policies: required ones not met (or pending), then optional ones not met, then met. */
 export function policySummary(checks: readonly CheckView[]): Summary {
@@ -458,14 +459,15 @@ export function toPrView(input: PrInput): PrView {
       missing.push(`${missingCount} more approval${missingCount === 1 ? "" : "s"}`);
     }
     missing.push(...pendingRequired.map((name) => `${name} (required)`));
-    for (const c of blockingPending.filter((c) => c.kind === "requiredReviewers" || c.kind === "proofOfPresence")) {
-      missing.push(c.kind === "proofOfPresence" ? "Proof of presence" : c.name);
+    for (const c of blockingPending.filter((c) => c.kind === "requiredReviewers")) {
+      missing.push(c.name);
     }
   }
   let approvalLevel: Summary["level"];
-  if (rejecting.length > 0 || (reviewPending && approvals === 0)) {
+  // Proof of presence is shown with the policies, so it does not color the approvals.
+  if (rejecting.length > 0 || (missing.length > 0 && approvals === 0)) {
     approvalLevel = "bad";
-  } else if (waiting.length > 0 || reviewPending) {
+  } else if (waiting.length > 0 || missing.length > 0) {
     approvalLevel = "warn";
   } else {
     approvalLevel = "good";
@@ -476,7 +478,7 @@ export function toPrView(input: PrInput): PrView {
       ["Rejected by", rejecting],
       ["Waiting for author", waiting],
       ["Missing", missing],
-      ["Approved an earlier push", people.filter((r) => r.stale).map((r) => r.name)],
+      ["Approved earlier push", people.filter((r) => r.stale).map((r) => r.name)],
       ["Approved", people.filter((r) => r.vote >= 5 && !r.stale).map((r) => (r.vote < 10 ? `${r.name} (with suggestions)` : r.name))],
     ]),
   };

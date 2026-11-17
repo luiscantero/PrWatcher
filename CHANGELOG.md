@@ -4,6 +4,7 @@
 
 - Five status icons in fixed columns: approvals, validation builds, branch policies, comments and auto-complete. Each is red, orange, green or faded, and its tooltip lists the details from the most to the least urgent.
 - No more state labels below the titles (such as *Failed …* or *Needs re-approval after new push*); the state icon's and the status icons' tooltips have the details.
+- Proof of presence is listed with the branch policies (lock), not the approvals; the lock is always closed; the comments tooltip reads *Resolved comments: 3/5*.
 
 ## 0.1.1
 
