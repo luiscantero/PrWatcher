@@ -318,6 +318,7 @@
       }),
       toolButton(state?.loading ? "sync~spin" : "refresh", "Refresh", () => run("prWatcher.refresh")),
       toolButton("add", "Add repository…", () => run("prWatcher.addRepository")),
+      toolButton("person", "Edit watched authors…", () => run("prWatcher.editAuthors")),
       toolButton("gear", "Settings", () => run("prWatcher.openSettings")),
     );
     if (selection) {
@@ -361,7 +362,6 @@
     );
     const actions = [
       ["link-external", "Open pull requests in the browser", () => open(`${repo.url}/pullrequests?_a=active`)],
-      ["person", "Edit watched authors…", () => run("prWatcher.editAuthors", [repo.key])],
       ["close", "Remove repository…", () => run("prWatcher.removeRepository", [repo.key])],
     ];
     for (const [glyph, title, action] of actions) {

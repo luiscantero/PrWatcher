@@ -50,16 +50,18 @@ opening links only to find that they are already merged.
 
   ![Needs review filter](images/needs-review.png)
 
-- **Watch teams, groups or people per repository**: the pull requests of the members of a team
+- **Watch teams, groups or people**: the pull requests of the members of a team
   (`AIO Connectors Team`), of a group (`[Project]\Group`, nested groups included), of people
   (`someone@contoso.com`), of anyone by the name Azure DevOps shows as a pull request's author,
   such as agents (`Agency`), build services (`One Build Service (contoso)`) or people
   (`Jane Doe`), or everyone's. A name that is not a team of the repository's project or a group
   of it is matched against the authors' names; a `[Project]\Group` that does not exist is reported
   on the repository without hiding the other authors' pull requests.
-  *PR Watcher: Add Repository…* takes the URL of a
-  repository or of its pull requests page (pasted from the clipboard if it holds one) and offers
-  your teams of that project.
+  *PR Watcher: Add Repository…* takes the URL of a repository or of its pull requests page
+  (pasted from the clipboard if it holds one). *Edit Watched Authors…* (the person button in the
+  dashboard's toolbar) sets the authors for all repositories at once and offers your teams of
+  their projects. A repository can still have its own `authors` in `prWatcher.repositories`;
+  editing the authors in the dashboard replaces them with the shared list.
 
   ![Choosing whose pull requests to show](images/authors.png)
 
@@ -123,10 +125,12 @@ threads:
 For example:
 
 ```jsonc
+"prWatcher.authors": ["Payments Team", "sofia@contoso.com"],
 "prWatcher.repositories": [
-  { "url": "https://dev.azure.com/contoso/Fabrikam/_git/payments-api", "authors": ["Payments Team"] },
-  { "url": "https://dev.azure.com/contoso/Fabrikam/_git/web-portal", "authors": ["Payments Team", "sofia@contoso.com"] },
-  "https://dev.azure.com/contoso/Fabrikam/_git/shared-libraries"
+  "https://dev.azure.com/contoso/Fabrikam/_git/payments-api",
+  "https://dev.azure.com/contoso/Fabrikam/_git/web-portal",
+  // Everyone's pull requests in this one.
+  { "url": "https://dev.azure.com/contoso/Fabrikam/_git/shared-libraries", "authors": ["*"] }
 ]
 ```
 
@@ -137,7 +141,7 @@ For example:
 | `PR Watcher: Open Dashboard` | Open the dashboard tab. |
 | `PR Watcher: Refresh` | Check for changes now. |
 | `PR Watcher: Add Repository…` | Watch a repository, given its URL, and choose whose pull requests to show. |
-| `PR Watcher: Edit Watched Authors…` | Change whose pull requests to show in a repository. |
+| `PR Watcher: Edit Watched Authors…` | Change whose pull requests to show in all repositories. |
 | `PR Watcher: Remove Repository…` | Stop watching a repository. |
 | `PR Watcher: Sign In to Azure DevOps` | Sign in with the configured authentication. |
 | `PR Watcher: Set Personal Access Token…` | Store a personal access token and use it. |

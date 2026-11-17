@@ -28,9 +28,9 @@ function watchOptions() {
   };
 }
 
-/** Writes `prWatcher.repositories` where it is defined (workspace or user settings). */
-async function updateRepositories(update: (entries: SettingEntry[]) => SettingEntry[]): Promise<void> {
-  const inspect = config().inspect<SettingEntry[]>("repositories");
+/** Writes a setting where it is defined (workspace folder, workspace or user settings). */
+async function updateSetting<T>(key: string, update: (current: T | undefined) => T): Promise<void> {
+  const inspect = config().inspect<T>(key);
   const target =
     inspect?.workspaceFolderValue !== undefined
       ? vscode.ConfigurationTarget.WorkspaceFolder
@@ -43,7 +43,11 @@ async function updateRepositories(update: (entries: SettingEntry[]) => SettingEn
       : target === vscode.ConfigurationTarget.Workspace
         ? inspect?.workspaceValue
         : inspect?.globalValue;
-  await config().update("repositories", update([...(current ?? [])]), target);
+  await config().update(key, update(current), target);
+}
+
+function updateRepositories(update: (entries: SettingEntry[]) => SettingEntry[]): Promise<void> {
+  return updateSetting<SettingEntry[]>("repositories", (current) => update([...(current ?? [])]));
 }
 
 function entryKey(entry: SettingEntry): string | undefined {
@@ -254,17 +258,24 @@ export async function activate(context: vscode.ExtensionContext) {
     return picked?.repo;
   };
 
-  /** Asks whose pull requests to show; undefined when cancelled, [] to use `prWatcher.authors`. */
-  const pickAuthors = async (repo: { organization: string; project: string; repository: string }, current: string[]): Promise<string[] | undefined> => {
+  /** Asks whose pull requests to show in all repositories; undefined when cancelled. */
+  const pickAuthors = async (projects: { organization: string; project: string }[], current: string[]): Promise<string[] | undefined> => {
     type Item = vscode.QuickPickItem & { value?: string; kind?: vscode.QuickPickItemKind };
-    const defaults = config().get<string[]>("authors", []);
-    const teams = await client.myTeams(repo.organization, repo.project).catch((e) => {
-      log.warn(`Could not list your teams in ${repo.project}: ${(e as Error).message}`);
-      return [];
-    });
-    const values = new Set([...current, ...teams.map((t) => t.name)]);
+    const unique = [...new Map(projects.map((p) => [`${p.organization}/${p.project}`.toLowerCase(), p])).values()];
+    const teams = (
+      await Promise.all(
+        unique.map((p) =>
+          client.myTeams(p.organization, p.project).catch((e) => {
+            log.warn(`Could not list your teams in ${p.project}: ${(e as Error).message}`);
+            return [];
+          }),
+        ),
+      )
+    ).flat();
+    const teamNames = new Set(teams.map((t) => t.name));
+    const values = new Set([...current, ...teamNames]);
     const items: Item[] = [
-      { label: "$(globe) Everyone", value: "*", picked: current.includes("*"), description: "All pull requests of the repository" },
+      { label: "$(globe) Everyone", value: "*", picked: current.includes("*"), description: "All pull requests of the repositories" },
       { label: "Teams and people", kind: vscode.QuickPickItemKind.Separator },
       ...[...values]
         .filter((v) => v !== "*")
@@ -272,11 +283,11 @@ export async function activate(context: vscode.ExtensionContext) {
           label: `${v.includes("@") ? "$(person)" : "$(organization)"} ${v}`,
           value: v,
           picked: current.includes(v),
-          description: teams.some((t) => t.name === v) ? "your team" : undefined,
+          description: teamNames.has(v) ? "your team" : undefined,
         })),
     ];
     const quickPick = vscode.window.createQuickPick<Item>();
-    quickPick.title = `Whose pull requests to show in ${repo.repository}${defaults.length > 0 ? ` (none checked: ${defaults.join(", ")})` : ""}`;
+    quickPick.title = `Whose pull requests to show in all repositories (none checked: everyone)`;
     quickPick.placeholder = "Type a team, [Project]\\Group, email or name (for example a build service) and press Enter to add it";
     quickPick.canSelectMany = true;
     quickPick.items = items;
@@ -352,15 +363,15 @@ export async function activate(context: vscode.ExtensionContext) {
           throw new Error(`Could not open ${ref.organization}/${ref.project}/${ref.repository}: ${(e as Error).message}`);
         }
         const canonical = { organization: ref.organization, project: repository.project.name, repository: repository.name };
-        const authors = await pickAuthors(canonical, []);
-        if (authors === undefined) {
-          return;
+        // The first time, ask whose pull requests to show; later repositories use the same authors.
+        if (config().get<string[]>("authors", []).length === 0 && watchOptions().repos.length === 0) {
+          const authors = await pickAuthors([canonical], []);
+          if (authors === undefined) {
+            return;
+          }
+          await updateSetting("authors", () => authors);
         }
-        const entry: RepositorySetting = { url: repository.webUrl || repoWebUrl(canonical) };
-        if (authors.length > 0) {
-          entry.authors = authors;
-        }
-        await updateRepositories((entries) => [...entries, entry]);
+        await updateRepositories((entries) => [...entries, { url: repository.webUrl || repoWebUrl(canonical) }]);
         dashboard.show();
       }),
     ),
@@ -379,27 +390,20 @@ export async function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand(
       "prWatcher.editAuthors",
-      guard(async (key?: unknown) => {
-        const repo = await pickRepo(key, "Repository whose watched authors to edit");
-        if (!repo) {
-          return;
-        }
+      guard(async () => {
+        const repos = watchOptions().repos;
+        // Everyone watched today, also through per-repository authors, so nothing is lost by accident.
         const entries = config().get<SettingEntry[]>("repositories", []);
-        const entry = entries.find((e) => entryKey(e) === repo.key);
-        const current = entry && typeof entry !== "string" ? (entry.authors ?? []) : [];
-        const authors = await pickAuthors(repo, current);
+        const own = entries.flatMap((e) => (typeof e === "string" ? [] : (e.authors ?? [])));
+        const current = [...new Set([...config().get<string[]>("authors", []), ...own])];
+        const authors = await pickAuthors(repos, current);
         if (authors === undefined) {
           return;
         }
-        await updateRepositories((list) =>
-          list.map((e) => {
-            if (entryKey(e) !== repo.key) {
-              return e;
-            }
-            const url = typeof e === "string" ? e : e.url;
-            return authors.length > 0 ? { url, authors } : { url };
-          }),
-        );
+        await updateSetting("authors", () => authors);
+        if (own.length > 0) {
+          await updateRepositories((list) => list.map((e) => (typeof e === "string" ? e : { url: e.url })));
+        }
       }),
     ),
     vscode.commands.registerCommand(

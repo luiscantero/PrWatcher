@@ -212,8 +212,9 @@ async function main() {
   const userData = path.join(profile, "data");
   fs.mkdirSync(path.join(userData, "User"), { recursive: true });
   const repositories = live
-    ? (process.env.PR_WATCHER_LIVE_REPOS ?? "").split(",").filter(Boolean).map((url) => ({ url, authors: (process.env.PR_WATCHER_LIVE_AUTHORS ?? "").split(",").filter(Boolean) }))
-    : [{ url: webUrl("payments-api"), authors: ["Payments Team"] }, webUrl("web-portal")];
+    ? (process.env.PR_WATCHER_LIVE_REPOS ?? "").split(",").filter(Boolean)
+    : [webUrl("payments-api"), webUrl("web-portal")];
+  const authors = live ? (process.env.PR_WATCHER_LIVE_AUTHORS ?? "").split(",").filter(Boolean) : ["Payments Team", "Sofia Rossi"];
   fs.writeFileSync(
     path.join(userData, "User", "settings.json"),
     JSON.stringify({
@@ -231,6 +232,7 @@ async function main() {
       "extensions.ignoreRecommendations": true,
       "workbench.colorTheme": "Default Dark Modern",
       "prWatcher.repositories": repositories,
+      "prWatcher.authors": authors,
       ...(live ? { "prWatcher.authentication": "azureCli" } : {}),
     }),
   );
@@ -326,9 +328,6 @@ async function main() {
     await runCommand("Notifications: Clear All Notifications");
 
     await runCommand("PR Watcher: Edit Watched Authors…");
-    await page.keyboard.type("payments");
-    await sleep(500);
-    await page.keyboard.press("Enter");
     await page.waitForSelector(".quick-input-list .monaco-list-row", { timeout: 30_000 });
     await sleep(500);
     await page.keyboard.type("sofia@contoso.com");
